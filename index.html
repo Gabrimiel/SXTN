@@ -5,22 +5,48 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SXTN - Music Player (Compact)</title>
     <link rel="stylesheet" href="style.css">
-</head>
+    
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
+    
+    <script>
+        // Remplacez le contenu de ce script par le code de l'étape 2 de votre console Firebase
+        // Votre code doit contenir 'const firebaseConfig = { ... }' et 'firebase.initializeApp(firebaseConfig);'
+        
+        // Exemples des lignes à remplacer par VOTRE code réel :
+        const firebaseConfig = {
+          apiKey: "AIzaSyA7D7V1C_wic-dop59E_x68So_RVrZAvC0", // Votre clé API
+          authDomain: "sxtn-music-player.firebaseapp.com", // Votre domaine Auth
+          projectId: "sxtn-music-player",
+          storageBucket: "sxtn-music-player.appspot.com",
+          messagingSenderId: "410421509994",
+          appId: "1:410421509994:web:957feeb477e20875ddd2f13"
+        };
+
+        // Initialisation de Firebase
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        // Fin de l'exemple - Assurez-vous d'avoir les lignes initializeApp et const auth
+        
+        // Nous n'utilisons PAS les imports ni getAnalytics si vous avez choisi l'option <script>
+
+    </script>
+    </head>
 <body>
 
     <div id="auth-container">
         <h2>Bienvenue sur SXTN</h2>
         <div id="login-form">
             <h3>Se connecter</h3>
-            <input type="text" id="login-username" placeholder="Nom d'utilisateur">
+            <input type="text" id="login-username" placeholder="Nom d'utilisateur (pas d'email)">
             <input type="password" id="login-password" placeholder="Mot de passe">
             <button type="button" onclick="loginUser()">Se connecter</button>
             <p>Pas encore de compte ? <a href="#" onclick="showRegister()">Créer un compte</a></p>
         </div>
         <div id="register-form" style="display: none;">
             <h3>Créer un compte</h3>
-            <input type="text" id="register-username" placeholder="Nom d'utilisateur">
-            <input type="password" id="register-password" placeholder="Mot de passe">
+            <input type="text" id="register-username" placeholder="Nom d'utilisateur (pas d'email)">
+            <input type="password" id="register-password" placeholder="Mot de passe (min 6 caractères)">
             <button type="button" onclick="registerUser()">Créer un compte</button>
             <p>Déjà un compte ? <a href="#" onclick="showLogin()">Se connecter</a></p>
         </div>
