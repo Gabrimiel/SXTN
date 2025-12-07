@@ -60,7 +60,7 @@
             <h2>LIBRARY</h2>
             
             <div id="album-carousel">
-            </div>
+                </div>
 
             <div id="tracklist-container">
                 <ul id="tracklist-ul">
@@ -98,19 +98,6 @@
             </div>
 
             <div id="right-controls-area">
-                
-                <div id="player-settings">
-                    <div id="volume-control">
-                        <span>🔊</span>
-                        <input type="range" id="volume-bar" min="0" max="1" step="0.1" value="1">
-                    </div>
-                    
-                    <div id="speed-control">
-                        <span id="speed-display">1.0x</span>
-                        <input type="range" id="speed-bar" min="0.5" max="2.0" step="0.1" value="1.0">
-                    </div>
-                </div>
-                
                 <div id="stem-controls" style="display: none;">
                     <div id="stem-container" style="display: flex; gap: 5px; padding: 0;"></div>
                     <audio id="stem-vocals" preload="auto" class="stem-player"></audio>
@@ -118,10 +105,67 @@
                     <audio id="stem-drums" preload="auto" class="stem-player"></audio>
                     <audio id="stem-other" preload="auto" class="stem-player"></audio>
                 </div>
-                <button id="delete-track-button" onclick="deleteCurrentTrack()" style="background-color: transparent; color: #cc3333; display: none;">🗑️</button>
+                <button id="delete-track-button" onclick="deleteCurrentTrack()" style="background-color: transparent; color: #cc3333; display: none; margin-left: 15px;">🗑️</button>
             </div>
         </footer>
     </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const stemModeOption = document.getElementById('stem-mode-option');
+            const manualStemFields = document.getElementById('manual-stem-fields');
+            
+            stemModeOption.addEventListener('change', () => {
+                manualStemFields.style.display = stemModeOption.checked ? 'block' : 'none';
+            });
+            
+            // Logique pour mettre à jour la barre de progression (visuel seulement)
+            const audioPlayerElement = document.getElementById('audio-player');
+            const progressBar = document.getElementById('progress-bar');
+            const currentTimeSpan = document.getElementById('current-time');
+            const durationSpan = document.getElementById('duration');
+            
+            audioPlayerElement.addEventListener('loadedmetadata', () => {
+                const duration = audioPlayerElement.duration;
+                durationSpan.textContent = formatTime(duration);
+                progressBar.max = duration;
+            });
+
+            audioPlayerElement.addEventListener('timeupdate', () => {
+                const currentTime = audioPlayerElement.currentTime;
+                currentTimeSpan.textContent = formatTime(currentTime);
+                progressBar.value = currentTime;
+            });
+            
+            progressBar.addEventListener('input', () => {
+                // Si l'utilisateur manipule la barre, on ajuste la position de lecture
+                const player = getCurrentPlayer(); 
+                player.currentTime = progressBar.value;
+            });
+
+            function formatTime(seconds) {
+                if (isNaN(seconds) || seconds === Infinity) return "0:00";
+                const minutes = Math.floor(seconds / 60);
+                const remainingSeconds = Math.floor(seconds % 60);
+                return `${minutes}:${remainingSeconds < 10 ? '0' : ''}${remainingSeconds}`;
+            }
+
+            // Pour les stems, on écoute le vocal player comme référence pour l'UI
+            const stemVocals = document.getElementById('stem-vocals');
+            stemVocals.addEventListener('loadedmetadata', () => {
+                const duration = stemVocals.duration;
+                durationSpan.textContent = formatTime(duration);
+                progressBar.max = duration;
+            });
+            
+            stemVocals.addEventListener('timeupdate', () => {
+                const currentTime = stemVocals.currentTime;
+                currentTimeSpan.textContent = formatTime(currentTime);
+                progressBar.value = currentTime;
+            });
+
+        });
+    </script>
     
     <script src="script.js"></script>
 </body>
