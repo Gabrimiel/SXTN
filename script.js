@@ -8,9 +8,18 @@ let syncInterval = null; // Variable globale pour stocker l'intervalle de synchr
 // Code secret pour l'accès Admin
 const ADMIN_CODE = "080216";
 
+// Définition de la structure des Stems pour la convention de nommage
+const STEM_SUFFIXES = {
+    vocals: '_Vocals.mp3',
+    bass: '_Bass.mp3',
+    drums: '_Drums.mp3',
+    other: '_Music.mp3' // Renommé 'other' en 'Music' pour correspondre à votre exemple
+};
+
 // =========================================================
 // GESTION IndexedDB (Base de données locale pour les Morceaux - Global)
 // =========================================================
+// NOTE : IndexedDB est maintenu, mais stockera maintenant des URL/chemins.
 
 const DB_NAME = 'SXTNDatabase';
 const DB_VERSION = 1;
@@ -32,7 +41,6 @@ function openDB() {
         request.onupgradeneeded = (event) => {
             const db = event.target.result;
             if (!db.objectStoreNames.contains(STORE_NAME)) {
-                // Création du store sans index "user" car les morceaux sont globaux
                 db.createObjectStore(STORE_NAME, { keyPath: 'id', autoIncrement: true });
             }
         };
@@ -120,25 +128,7 @@ function toggleSideMenu() {
 // GESTION LECTEUR ET PLAYLIST
 // =========================================================
 
-// Fonction utilitaire pour lire un fichier en Base64
-function readFileAsDataURL(file) {
-    return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = (e) => resolve(e.target.result);
-        reader.onerror = (e) => reject(e);
-        reader.readAsDataURL(file);
-    });
-}
-
-// Récupère l'élément AudioPlayer principal ou le Vocal Stem Player
-function getCurrentPlayer() {
-    if (currentPlaylist[currentIndex] && currentPlaylist[currentIndex].stems) {
-        return document.getElementById('stem-vocals');
-    }
-    return document.getElementById('audio-player');
-}
-
-// Logique pour l'ajout de morceau
+// LOGIQUE D'AJOUT DE MORCEAU (Utilise des chemins/URL au lieu de Base64)
 async function addTrack() {
     if (!isAdmin) {
         alert("Seul l'Administrateur peut ajouter des morceaux.");
@@ -148,54 +138,23 @@ async function addTrack() {
     const title = document.getElementById('music-title').value || "Titre Inconnu";
     const artist = document.getElementById('music-description').value || "Artiste Inconnu";
     const album = document.getElementById('music-artist').value || "Album Inconnu";
-    const coverFile = document.getElementById('cover-input').files[0];
-    const audioFile = document.getElementById('audio-input').files[0];
+    const coverPath = document.getElementById('cover-path').value || "placeholder.png"; // Utilise un champ de texte
     const hasStems = document.getElementById('stem-mode-option').checked;
 
-    let coverBase64 = "placeholder.png";
-    let mainAudioBase64 = null;
-    let stemData = {};
+    let mainAudioPath = null;
+    let stemBasePath = null; // Nom de base pour les stems (ex: audio/stems/Donda 2_Pablo)
 
-    // 1. Gérer la pochette
-    if (coverFile) {
-        try {
-            coverBase64 = await readFileAsDataURL(coverFile);
-        } catch (e) {
-            alert("Erreur de lecture de l'image de couverture.");
-            return;
-        }
-    }
-
-    // 2. Gérer les fichiers audio
     if (hasStems) {
-        const vocalsFile = document.getElementById('stem-vocals-input').files[0];
-        const bassFile = document.getElementById('stem-bass-input').files[0];
-        const drumsFile = document.getElementById('stem-drums-input').files[0];
-        const otherFile = document.getElementById('stem-other-input').files[0];
-
-        if (!vocalsFile || !bassFile || !drumsFile || !otherFile) {
-             alert("Veuillez fournir les 4 fichiers Stems (Vocals, Bass, Drums, Other) pour le mode Stem.");
+        stemBasePath = document.getElementById('stem-base-path').value;
+        if (!stemBasePath) {
+             alert("Veuillez fournir le chemin de base du Stem (ex: audio/stems/Nom_du_morceau).");
              return;
         }
-
-        try {
-            stemData.vocals = await readFileAsDataURL(vocalsFile);
-            stemData.bass = await readFileAsDataURL(bassFile);
-            stemData.drums = await readFileAsDataURL(drumsFile);
-            stemData.other = await readFileAsDataURL(otherFile);
-        } catch (e) {
-            alert("Erreur de lecture d'un fichier Stem.");
-            return;
-        }
+        // Pas besoin d'enregistrer les 4 chemins, on les déduira du chemin de base.
     } else {
-        if (!audioFile) {
-            alert("Veuillez fournir le fichier Audio Principal.");
-            return;
-        }
-        try {
-            mainAudioBase64 = await readFileAsDataURL(audioFile);
-        } catch (e) {
-            alert("Erreur de lecture du fichier Audio Principal.");
+        mainAudioPath = document.getElementById('audio-path').value;
+        if (!mainAudioPath) {
+            alert("Veuillez fournir le chemin du fichier Audio Principal.");
             return;
         }
     }
@@ -204,9 +163,9 @@ async function addTrack() {
         title: title,
         artist: artist,
         album: album,
-        cover: coverBase64,
-        mainAudio: mainAudioBase64,
-        stems: hasStems ? stemData : null,
+        cover: coverPath,          // URL de la pochette
+        mainAudio: mainAudioPath,  // URL de l'audio principal
+        stems: hasStems ? stemBasePath : null, // URL de base des Stems
     };
 
     try {
@@ -220,7 +179,8 @@ async function addTrack() {
     }
 }
 
-// Logique pour charger la playlist
+
+// Logique pour charger la playlist (inchangée)
 async function loadPlaylist() {
     const allTracks = await readAllTracksFromDB(); 
     currentPlaylist = allTracks; 
@@ -250,7 +210,7 @@ async function loadPlaylist() {
     updateAdminUI(); 
 }
 
-// Logique pour mettre à jour l'interface Admin
+// Logique pour mettre à jour l'interface Admin (inchangée)
 function updateAdminUI() {
     document.getElementById('delete-track-button').style.display = isAdmin ? 'block' : 'none';
     
@@ -264,7 +224,7 @@ function updateAdminUI() {
     }
 }
 
-// Logique d'affichage des albums
+// Logique d'affichage des albums (inchangée)
 function displayAlbums() {
     const carousel = document.getElementById('album-carousel');
     if (!carousel) return; 
@@ -300,7 +260,7 @@ function displayAlbums() {
 
 let activeAlbum = null;
 
-// Logique d'affichage de la liste des morceaux
+// Logique d'affichage de la liste des morceaux (inchangée)
 function displayTracklist(albumName) {
     const tracklistUl = document.getElementById('tracklist-ul');
     if (!tracklistUl) return;
@@ -348,7 +308,7 @@ function displayTracklist(albumName) {
     }
 }
 
-// Logique de suppression de morceau
+// Logique de suppression de morceau (inchangée)
 async function deleteTrack(trackId) {
     if (!isAdmin) {
         alert("Seul l'Administrateur peut supprimer des morceaux.");
@@ -375,7 +335,7 @@ async function deleteTrack(trackId) {
     }
 }
 
-// Logique de lecture d'un morceau
+// Logique de lecture d'un morceau (Mise à jour pour les URL)
 function playTrack(index) {
     currentIndex = index;
     const track = currentPlaylist[currentIndex];
@@ -385,8 +345,9 @@ function playTrack(index) {
     stopPlayback();
 
     const audioPlayer = document.getElementById('audio-player');
-    const playerToUse = track.stems ? document.getElementById('stem-vocals') : audioPlayer;
     const isStemMode = !!track.stems;
+    const playerToUse = isStemMode ? document.getElementById('stem-vocals') : audioPlayer;
+
 
     document.getElementById('stem-controls').style.display = isStemMode ? 'flex' : 'none';
     document.getElementById('delete-track-button').style.display = isAdmin ? 'block' : 'none';
@@ -396,25 +357,60 @@ function playTrack(index) {
     document.getElementById('current-artist-footer').textContent = `${track.artist} - Album: ${track.album}`;
 
     if (isStemMode) {
-        document.getElementById('stem-vocals').src = track.stems.vocals;
-        document.getElementById('stem-bass').src = track.stems.bass;
-        document.getElementById('stem-drums').src = track.stems.drums;
-        document.getElementById('stem-other').src = track.stems.other;
+        // CONVENTION DE NOMMAGE : on reconstruit les chemins des Stems
+        const stemBasePath = track.stems;
+        document.getElementById('stem-vocals').src = stemBasePath + STEM_SUFFIXES.vocals;
+        document.getElementById('stem-bass').src = stemBasePath + STEM_SUFFIXES.bass;
+        document.getElementById('stem-drums').src = stemBasePath + STEM_SUFFIXES.drums;
+        document.getElementById('stem-other').src = stemBasePath + STEM_SUFFIXES.other;
         setupStemButtons();
     } else {
         audioPlayer.src = track.mainAudio;
     }
     
-    // Utiliser onloadedmetadata sur le player principal pour lancer la lecture synchronisée
+    // Le onloadedmetadata garantit que le fichier est prêt avant de lancer la lecture synchronisée
     playerToUse.onloadedmetadata = () => {
+        // Réinitialiser la barre de progression au cas où la durée change
+        const duration = playerToUse.duration;
+        document.getElementById('progress-bar').max = duration; 
+        document.getElementById('duration-display').textContent = formatTime(duration);
+        
         playAllPlayers();
     };
+    
+    // Si le fichier est déjà chargé (cache), on peut lancer directement
+    if (playerToUse.readyState >= 2) { // 2 = HAVE_CURRENT_DATA
+        playAllPlayers();
+    }
+
 
     playerToUse.onended = playNext;
     displayTracklist(track.album);
 }
 
-// Logique pour arrêter la lecture
+// Fonction utilitaire pour le formatage du temps (pour la barre de progression)
+function formatTime(time) {
+    const minutes = Math.floor(time / 60);
+    const seconds = Math.floor(time % 60);
+    return `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
+}
+
+// Mise à jour de la barre de progression (utilise le player Vocal pour la durée en mode Stem)
+setInterval(() => {
+    if (isPlaying) {
+        const track = currentPlaylist[currentIndex];
+        const isStemMode = track && track.stems;
+        const player = isStemMode ? document.getElementById('stem-vocals') : document.getElementById('audio-player');
+        
+        if (!isNaN(player.duration)) {
+             document.getElementById('progress-bar').value = player.currentTime;
+             document.getElementById('time-display').textContent = formatTime(player.currentTime);
+        }
+    }
+}, 100);
+
+
+// Logique pour arrêter la lecture (inchangée)
 function stopPlayback() {
     isPlaying = false;
     document.getElementById('play-pause-button').textContent = '▶️';
@@ -425,14 +421,17 @@ function stopPlayback() {
     document.getElementById('stem-drums').pause();
     document.getElementById('stem-other').pause();
     
-    stopStemSynchronization(); // ARRET DE LA SYNCHRONISATION ANTI-DÉRIVE
+    stopStemSynchronization(); 
 
     document.querySelectorAll('.stem-player').forEach(player => player.currentTime = 0);
     document.getElementById('audio-player').currentTime = 0;
+    
+    document.getElementById('progress-bar').value = 0;
+    document.getElementById('time-display').textContent = formatTime(0);
 }
 
 
-// Logique de pause/reprise
+// Logique de pause/reprise (inchangée)
 function togglePlayPause() {
      if (currentIndex === -1 || currentPlaylist.length === 0) return;
      
@@ -449,7 +448,7 @@ function togglePlayPause() {
             document.getElementById('stem-bass').pause();
             document.getElementById('stem-drums').pause();
             document.getElementById('stem-other').pause();
-            stopStemSynchronization(); // ARRET DE LA SYNCHRONISATION
+            stopStemSynchronization(); 
         }
 
     } else {
@@ -461,13 +460,13 @@ function togglePlayPause() {
             document.getElementById('stem-bass').play();
             document.getElementById('stem-drums').play();
             document.getElementById('stem-other').play();
-            startStemSynchronization(); // DEMARRAGE DE LA SYNCHRONISATION
+            startStemSynchronization(); 
         }
     }
 }
 
 /**
- * LANCE TOUS LES PLAYERS EN SYNCHRONISATION (CORRECTION DE BUG STEMS INITIAL)
+ * LANCE TOUS LES PLAYERS EN SYNCHRONISATION (Correction de bug stems initial)
  */
 function playAllPlayers() {
     const track = currentPlaylist[currentIndex];
@@ -498,7 +497,7 @@ function playAllPlayers() {
     }
 }
 
-// FONCTIONS ANTI-DÉRIVE (ANTI-DRIFT)
+// FONCTIONS ANTI-DÉRIVE (ANTI-DRIFT) - Maintenues pour la synchronisation continue
 function startStemSynchronization() {
     if (syncInterval) {
         clearInterval(syncInterval);
@@ -511,7 +510,6 @@ function startStemSynchronization() {
         document.getElementById('stem-other')
     ];
 
-    // Définir un intervalle de resynchronisation (toutes les 250 ms)
     syncInterval = setInterval(() => {
         if (!isPlaying || mainPlayer.paused) {
             clearInterval(syncInterval);
@@ -526,7 +524,6 @@ function startStemSynchronization() {
             
             // Si le décalage est supérieur à 50 millisecondes (0.05 seconde)
             if (timeDifference > 0.05) { 
-                // Forcer la synchronisation immédiate
                 stemPlayer.currentTime = mainTime;
             }
         });
@@ -559,84 +556,44 @@ function playPrevious() {
     }
 }
 
-// CORRECTION IMPORTANTE DE LA FONCTION SEEK (AVANCE RAPIDE)
+// FONCTION SEEK (AVANCE RAPIDE) - Simplifiée car les URL sont plus rapides
 function seekForward(seconds) {
-    // Si ce n'est pas en lecture ou pas de morceau, on sort
-    if (currentIndex === -1 || !isPlaying) return; 
+    if (currentIndex === -1) return;
     
     const track = currentPlaylist[currentIndex];
     const isStemMode = track && track.stems;
     const player = isStemMode ? document.getElementById('stem-vocals') : document.getElementById('audio-player');
     
-    // 1. Définir le nouveau temps cible
-    const newTimeTarget = player.currentTime + seconds;
-
-    // 2. Si mode Stem, on force l'opération Pause-Sync-Play
+    const newTime = player.currentTime + seconds;
+    player.currentTime = newTime;
+    
     if (isStemMode) {
-        // Pause forcée pour donner le temps au navigateur de se recaler
-        player.pause();
-        document.getElementById('stem-bass').pause();
-        document.getElementById('stem-drums').pause();
-        document.getElementById('stem-other').pause();
-
-        // Application du nouveau temps sur tous les Stems
-        document.getElementById('stem-vocals').currentTime = newTimeTarget;
-        document.getElementById('stem-bass').currentTime = newTimeTarget;
-        document.getElementById('stem-drums').currentTime = newTimeTarget;
-        document.getElementById('stem-other').currentTime = newTimeTarget;
-
-        // Reprise immédiate (la boucle de sync anti-dérive prendra le relai)
-        document.getElementById('stem-vocals').play();
-        document.getElementById('stem-bass').play();
-        document.getElementById('stem-drums').play();
-        document.getElementById('stem-other').play();
-
-    } else {
-        // Si audio simple, on avance simplement
-        player.currentTime = newTimeTarget;
+        document.getElementById('stem-bass').currentTime = newTime;
+        document.getElementById('stem-drums').currentTime = newTime;
+        document.getElementById('stem-other').currentTime = newTime;
     }
 }
 
-// CORRECTION IMPORTANTE DE LA FONCTION SEEK (RETOUR RAPIDE)
+// FONCTION SEEK (RETOUR RAPIDE) - Simplifiée car les URL sont plus rapides
 function seekBackward(seconds) {
-    // Si ce n'est pas en lecture ou pas de morceau, on sort
-    if (currentIndex === -1 || !isPlaying) return; 
+    if (currentIndex === -1) return;
 
     const track = currentPlaylist[currentIndex];
     const isStemMode = track && track.stems;
     const player = isStemMode ? document.getElementById('stem-vocals') : document.getElementById('audio-player');
 
-    // 1. Définir le nouveau temps cible
-    const newTimeTarget = player.currentTime - seconds;
+    const newTime = player.currentTime - seconds;
+    player.currentTime = newTime;
 
-    // 2. Si mode Stem, on force l'opération Pause-Sync-Play
     if (isStemMode) {
-        // Pause forcée
-        player.pause();
-        document.getElementById('stem-bass').pause();
-        document.getElementById('stem-drums').pause();
-        document.getElementById('stem-other').pause();
-
-        // Application du nouveau temps sur tous les Stems
-        document.getElementById('stem-vocals').currentTime = newTimeTarget;
-        document.getElementById('stem-bass').currentTime = newTimeTarget;
-        document.getElementById('stem-drums').currentTime = newTimeTarget;
-        document.getElementById('stem-other').currentTime = newTimeTarget;
-
-        // Reprise immédiate
-        document.getElementById('stem-vocals').play();
-        document.getElementById('stem-bass').play();
-        document.getElementById('stem-drums').play();
-        document.getElementById('stem-other').play();
-
-    } else {
-        // Si audio simple, on recule simplement
-        player.currentTime = newTimeTarget;
+        document.getElementById('stem-bass').currentTime = newTime;
+        document.getElementById('stem-drums').currentTime = newTime;
+        document.getElementById('stem-other').currentTime = newTime;
     }
 }
 
 
-// CORRECTION IMPORTANTE DE LA BARRE DE PROGRESSION
+// BARRE DE PROGRESSION - Simplifiée pour un seek rapide
 document.getElementById('progress-bar').addEventListener('input', () => {
     if (currentIndex === -1) return;
     
@@ -648,26 +605,11 @@ document.getElementById('progress-bar').addEventListener('input', () => {
         const mainPlayer = document.getElementById('audio-player');
         
         if (isStemMode) {
-            // 1. PAUSE (Même si ce n'est pas en cours de lecture, on s'assure qu'ils sont arrêtés)
-            document.getElementById('stem-vocals').pause();
-            document.getElementById('stem-bass').pause();
-            document.getElementById('stem-drums').pause();
-            document.getElementById('stem-other').pause();
-
-            // 2. SYNCHRONISATION
+            // Mettre à jour le temps de lecture de TOUS les players Stems
             document.getElementById('stem-vocals').currentTime = newTime;
             document.getElementById('stem-bass').currentTime = newTime;
             document.getElementById('stem-drums').currentTime = newTime;
             document.getElementById('stem-other').currentTime = newTime;
-
-            // 3. REPRISE (uniquement si c'était en cours de lecture au moment du seek)
-            if (isPlaying) {
-                document.getElementById('stem-vocals').play();
-                document.getElementById('stem-bass').play();
-                document.getElementById('stem-drums').play();
-                document.getElementById('stem-other').play();
-            }
-
         } else {
             // Sinon, mettre à jour le player principal
             mainPlayer.currentTime = newTime;
@@ -683,7 +625,7 @@ function setupStemButtons() {
         vocals: 'VOIX',
         bass: 'BASS',
         drums: 'DRUMS',
-        other: 'OTHER'
+        other: 'MUSIC' // Affichage de 'MUSIC' pour le Stem 'other'
     };
 
     Object.keys(stemNames).forEach(stemId => {
