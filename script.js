@@ -425,7 +425,7 @@ function stopPlayback() {
     document.getElementById('stem-drums').pause();
     document.getElementById('stem-other').pause();
     
-    stopStemSynchronization(); // ARRET DE LA SYNCHRONISATION
+    stopStemSynchronization(); // ARRET DE LA SYNCHRONISATION ANTI-DÉRIVE
 
     document.querySelectorAll('.stem-player').forEach(player => player.currentTime = 0);
     document.getElementById('audio-player').currentTime = 0;
@@ -559,6 +559,7 @@ function playPrevious() {
     }
 }
 
+// CORRECTION IMPORTANTE DE LA FONCTION SEEK (AVANCE RAPIDE)
 function seekForward(seconds) {
     if (currentIndex === -1) return;
     
@@ -566,16 +567,20 @@ function seekForward(seconds) {
     const isStemMode = track && track.stems;
     const player = isStemMode ? document.getElementById('stem-vocals') : document.getElementById('audio-player');
     
+    // 1. Avancer le joueur principal (Vocal ou Main)
     player.currentTime += seconds;
     
+    // 2. Synchroniser les autres stems immédiatement si en mode Stem
     if (isStemMode) {
         const newTime = player.currentTime;
+        // On s'assure que les autres Stems se calent exactement sur le nouveau temps du Vocal
         document.getElementById('stem-bass').currentTime = newTime;
         document.getElementById('stem-drums').currentTime = newTime;
         document.getElementById('stem-other').currentTime = newTime;
     }
 }
 
+// CORRECTION IMPORTANTE DE LA FONCTION SEEK (RETOUR RAPIDE)
 function seekBackward(seconds) {
     if (currentIndex === -1) return;
 
@@ -583,10 +588,13 @@ function seekBackward(seconds) {
     const isStemMode = track && track.stems;
     const player = isStemMode ? document.getElementById('stem-vocals') : document.getElementById('audio-player');
 
+    // 1. Reculer le joueur principal (Vocal ou Main)
     player.currentTime -= seconds;
 
+    // 2. Synchroniser les autres stems immédiatement si en mode Stem
     if (isStemMode) {
         const newTime = player.currentTime;
+        // On s'assure que les autres Stems se calent exactement sur le nouveau temps du Vocal
         document.getElementById('stem-bass').currentTime = newTime;
         document.getElementById('stem-drums').currentTime = newTime;
         document.getElementById('stem-other').currentTime = newTime;
@@ -594,6 +602,7 @@ function seekBackward(seconds) {
 }
 
 
+// CORRECTION IMPORTANTE DE LA BARRE DE PROGRESSION
 document.getElementById('progress-bar').addEventListener('input', () => {
     if (currentIndex === -1) return;
     
@@ -604,12 +613,13 @@ document.getElementById('progress-bar').addEventListener('input', () => {
         const mainPlayer = document.getElementById('audio-player');
         
         if (track.stems) {
-            // Mettre à jour le temps de lecture de tous les players
+            // Mettre à jour le temps de lecture de TOUS les players Stems
             document.getElementById('stem-vocals').currentTime = newTime;
             document.getElementById('stem-bass').currentTime = newTime;
             document.getElementById('stem-drums').currentTime = newTime;
             document.getElementById('stem-other').currentTime = newTime;
         } else {
+            // Sinon, mettre à jour le player principal
             mainPlayer.currentTime = newTime;
         }
     }
