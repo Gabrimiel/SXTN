@@ -2,7 +2,8 @@
 let currentPlaylist = [];
 let currentIndex = -1;
 let isPlaying = false;
-let isAdmin = false; // Nouvelle variable pour le mode Admin
+let isAdmin = false; 
+let activeAlbum = null;
 
 // Code secret pour l'accès Admin
 const ADMIN_CODE = "080216";
@@ -44,8 +45,7 @@ async function addTrackToDB(trackData) {
         const transaction = db.transaction([STORE_NAME], 'readwrite');
         const store = transaction.objectStore(STORE_NAME);
 
-        // Pas besoin du champ 'user' dans trackData ici
-        
+        // Ajout du morceau
         const request = store.add(trackData);
         
         request.onsuccess = () => resolve(request.result);
@@ -89,13 +89,10 @@ async function deleteTrackFromDB(trackId) {
 // =========================================================
 
 function showAdminPrompt() {
-    // Vérifie si nous sommes déjà en mode Admin
     if (isAdmin) {
         alert("Mode Administrateur déjà activé.");
         return;
     }
-    
-    // Utilisation d'une boîte de dialogue simple pour le code
     const code = prompt("Entrez le code Admin pour accéder à l'importation de morceaux :");
 
     if (code === ADMIN_CODE) {
@@ -110,7 +107,6 @@ function showAdminPrompt() {
 function toggleSideMenu() {
     const menu = document.getElementById('side-menu');
     
-    // Si on n'est PAS Admin, on n'ouvre pas le menu d'importation
     if (!isAdmin && !menu.classList.contains('open')) {
         alert("Vous devez activer le mode Administrateur (ADMIN ACCESS) pour importer des morceaux.");
         return;
@@ -123,7 +119,6 @@ function toggleSideMenu() {
 // GESTION LECTEUR ET PLAYLIST
 // =========================================================
 
-// Fonction utilitaire pour lire un fichier en Base64
 function readFileAsDataURL(file) {
     return new Promise((resolve, reject) => {
         const reader = new FileReader();
@@ -133,9 +128,7 @@ function readFileAsDataURL(file) {
     });
 }
 
-// Récupère l'élément AudioPlayer principal ou le Vocal Stem Player
 function getCurrentPlayer() {
-    // Si des stems sont en cours de lecture, on utilise le vocal player comme maître
     if (currentPlaylist[currentIndex] && currentPlaylist[currentIndex].stems) {
         return document.getElementById('stem-vocals');
     }
@@ -211,7 +204,6 @@ async function addTrack() {
         cover: coverBase64,
         mainAudio: mainAudioBase64,
         stems: hasStems ? stemData : null,
-        // Plus de champ 'user' nécessaire
     };
 
     try {
@@ -226,11 +218,9 @@ async function addTrack() {
 }
 
 async function loadPlaylist() {
-    // Tous les morceaux sont chargés, peu importe qui les a ajoutés.
     const allTracks = await readAllTracksFromDB(); 
     currentPlaylist = allTracks; 
 
-    // Affiche un message si la bibliothèque est vide.
     const libraryMain = document.getElementById('library-main');
     if (currentPlaylist.length === 0) {
         libraryMain.innerHTML = `
@@ -242,7 +232,6 @@ async function loadPlaylist() {
             <div id="tracklist-container"><ul id="tracklist-ul"></ul></div>
         `;
     } else {
-        // Pour s'assurer que les conteneurs sont présents si on recharge
         if (!document.getElementById('album-carousel')) {
              libraryMain.innerHTML = `
                 <h2>LIBRARY</h2>
@@ -254,15 +243,13 @@ async function loadPlaylist() {
         displayTracklist(null);
     }
     
-    // Mise à jour de l'affichage en mode Admin/Lecture seule
     updateAdminUI(); 
 }
 
 function updateAdminUI() {
-    // Seul l'Admin peut supprimer des morceaux
     document.getElementById('delete-track-button').style.display = isAdmin ? 'block' : 'none';
-    
-    // Le message de la bibliothèque peut aussi changer si elle est vide
+    document.getElementById('admin-access-btn').textContent = isAdmin ? "ADMIN (Activé)" : "ADMIN ACCESS";
+
     const emptyMessage = document.getElementById('empty-library-message');
     if (emptyMessage) {
         emptyMessage.textContent = isAdmin 
@@ -276,7 +263,6 @@ function displayAlbums() {
     if (!carousel) return; 
     carousel.innerHTML = '';
     
-    // Regrouper les morceaux par album
     const albums = currentPlaylist.reduce((acc, track) => {
         if (!acc[track.album]) {
             acc[track.album] = {
@@ -290,7 +276,6 @@ function displayAlbums() {
         return acc;
     }, {});
 
-    // Afficher chaque album
     Object.values(albums).forEach(albumData => {
         const card = document.createElement('div');
         card.className = 'album-card';
@@ -313,7 +298,6 @@ function displayTracklist(albumName) {
     if (!tracklistUl) return;
     tracklistUl.innerHTML = '';
     
-    // Mettre à jour la carte active
     document.querySelectorAll('.album-card').forEach(card => {
         card.classList.remove('active-card');
     });
@@ -334,7 +318,6 @@ function displayTracklist(albumName) {
             li.className = `track-item ${globalIndex === currentIndex ? 'active-track' : ''}`;
             li.setAttribute('data-index', globalIndex);
             
-            // Le bouton PLAY/PAUSE est géré dans le li pour toute la ligne
             li.onclick = () => playTrack(globalIndex);
 
             const playText = track.stems ? ' [STEMS]' : '';
@@ -346,7 +329,7 @@ function displayTracklist(albumName) {
                     <span style="font-size: 0.8em; color: #777;">${playText}</span>
                 </div>
                 <div class="track-controls">
-                     ${isAdmin ? `<button onclick="event.stopPropagation(); deleteTrack(${track.id})" class="track-delete-button">🗑️</button>` : ''}
+                    ${isAdmin ? `<button onclick="event.stopPropagation(); deleteTrack(${track.id})" class="track-delete-button">🗑️</button>` : ''}
                 </div>
             `;
             tracklistUl.appendChild(li);
@@ -371,23 +354,19 @@ async function deleteTrack(trackId) {
         await deleteTrackFromDB(trackId);
         alert("Morceau supprimé.");
         
-        // Réinitialiser le player si le morceau en cours est supprimé
         if (currentPlaylist[currentIndex] && currentPlaylist[currentIndex].id === trackId) {
             stopPlayback();
         }
 
-        await loadPlaylist(); // Recharge tout
-        displayTracklist(activeAlbum); // Affiche la tracklist actuelle (qui sera mise à jour)
+        await loadPlaylist(); 
+        displayTracklist(activeAlbum); 
     } catch (e) {
         alert("Erreur lors de la suppression du morceau.");
         console.error(e);
     }
 }
 
-// ... (Les fonctions playTrack, stopPlayback, togglePlayPause, playNext, playPrevious, seekForward, seekBackward, setupStemButtons restent identiques, mais doivent être incluses dans le fichier script.js. Je ne les remets pas ici par souci de concision, mais assurez-vous de garder la version complète.)
-
 function playTrack(index) {
-    // ... (Corps de la fonction playTrack) ...
     currentIndex = index;
     const track = currentPlaylist[currentIndex];
 
@@ -400,7 +379,7 @@ function playTrack(index) {
     const isStemMode = !!track.stems;
 
     document.getElementById('stem-controls').style.display = isStemMode ? 'flex' : 'none';
-    document.getElementById('delete-track-button').style.display = isAdmin ? 'block' : 'none'; // Affichage conditionnel
+    document.getElementById('delete-track-button').style.display = isAdmin ? 'block' : 'none'; 
 
     document.getElementById('current-cover-footer').src = track.cover;
     document.getElementById('current-title-footer').textContent = track.title;
@@ -420,6 +399,12 @@ function playTrack(index) {
     
     playerToUse.onended = playNext;
     displayTracklist(track.album);
+    
+    // Appliquer les paramètres de volume et de vitesse existants lors du changement de piste
+    const volumeBar = document.getElementById('volume-bar');
+    const speedBar = document.getElementById('speed-bar');
+    updateVolume(parseFloat(volumeBar.value));
+    updatePlaybackRate(parseFloat(speedBar.value));
 }
 
 function stopPlayback() {
@@ -582,6 +567,31 @@ function setupStemButtons() {
         stemContainer.appendChild(button);
     });
 }
+
+// =========================================================
+// NOUVEAU : GESTION VOLUME ET VITESSE (Playback Rate)
+// =========================================================
+
+function updateVolume(volume) {
+    const mainPlayer = document.getElementById('audio-player');
+    const stemPlayers = document.querySelectorAll('.stem-player');
+
+    mainPlayer.volume = volume;
+    stemPlayers.forEach(player => player.volume = volume);
+}
+
+function updatePlaybackRate(rate) {
+    const mainPlayer = document.getElementById('audio-player');
+    const stemPlayers = document.querySelectorAll('.stem-player');
+
+    // La modification de la vitesse de lecture (playbackRate) modifie aussi le pitch (hauteur)
+    mainPlayer.playbackRate = rate;
+    stemPlayers.forEach(player => player.playbackRate = rate);
+    
+    // Mise à jour de l'affichage
+    document.getElementById('speed-display').textContent = `${rate.toFixed(1)}x`;
+}
+
 
 // Lancement initial de la playlist au chargement de la page
 document.addEventListener('DOMContentLoaded', loadPlaylist);
