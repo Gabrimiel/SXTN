@@ -29,28 +29,8 @@
 <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
 
 <script>
-    // VOTRE CONFIGURATION FIREBASE ICI
-    const firebaseConfig = {
-      apiKey: "AIzaSyA7D7V1C_wic-dop59E_x68So_RVrZAvC0", // Vos clés réelles
-      authDomain: "sxtn-music-player.firebaseapp.com",
-      projectId: "sxtn-music-player",
-      storageBucket: "sxtn-music-player.appspot.com",
-      messagingSenderId: "410421509994",
-      appId: "1:410421509994:web:957feeb477e20875ddd2f13",
-    };
 
-    // Initialisation
-    firebase.initializeApp(firebaseConfig);
-    // Assurez-vous que 'auth' est bien accessible globalement
-    auth = firebase.auth(); 
-    
-    // Si l'erreur persiste après cette correction, essayez de retirer le 'const' 
-    // pour rendre la variable explicitement globale:
-    // auth = firebase.auth(); 
-
-</script>
-
-<script src="script.js"></script>
+    <script src="script.js"></script>
         const app = initializeApp(firebaseConfig);
         const analytics = getAnalytics(app);
         // Fin de l'exemple - Assurez-vous d'avoir les lignes initializeApp et const auth
@@ -239,6 +219,7 @@
     <script src="script.js"></script>
 </body>
 </html>
+
 
 
 
