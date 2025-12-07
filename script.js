@@ -2,8 +2,8 @@
 let currentPlaylist = [];
 let currentIndex = -1;
 let isPlaying = false;
-let isAdmin = false; // Nouvelle variable pour le mode Admin
-let syncInterval = null; // Variable globale pour stocker l'intervalle de synchronisation des Stems
+let isAdmin = false; 
+let syncInterval = null; 
 
 // Code secret pour l'accès Admin
 const ADMIN_CODE = "080216";
@@ -91,7 +91,7 @@ async function deleteTrackFromDB(trackId) {
 }
 
 // =========================================================
-// GESTION MODE ADMIN (CORRECTION: cette fonction est essentielle et manquait)
+// GESTION MODE ADMIN (Fonction corrigée, résout l'erreur 'showAdminPrompt is not defined')
 // =========================================================
 
 function showAdminPrompt() {
@@ -128,7 +128,7 @@ function toggleSideMenu() {
 // GESTION LECTEUR ET PLAYLIST
 // =========================================================
 
-// LOGIQUE D'AJOUT DE MORCEAU (Utilise des chemins/URL au lieu de Base64)
+// LOGIQUE D'AJOUT DE MORCEAU (Correction: utilise logo.png par défaut)
 async function addTrack() {
     if (!isAdmin) {
         alert("Seul l'Administrateur peut ajouter des morceaux.");
@@ -139,13 +139,13 @@ async function addTrack() {
     const artist = document.getElementById('music-description').value || "Artiste Inconnu";
     const album = document.getElementById('music-artist').value || "Album Inconnu";
     
-    // CORRECTION: Chemin par défaut vers logo.png ou placeholder.png (si à la racine)
+    // CORRECTION: Chemin par défaut vers logo.png (qui existe dans votre dépôt)
     const coverPath = document.getElementById('cover-path').value || "logo.png"; 
     
     const hasStems = document.getElementById('stem-mode-option').checked;
 
     let mainAudioPath = null;
-    let stemBasePath = null; // Nom de base pour les stems (ex: audio/stems/Donda 2_Pablo)
+    let stemBasePath = null; 
 
     if (hasStems) {
         stemBasePath = document.getElementById('stem-base-path').value;
@@ -184,6 +184,7 @@ async function addTrack() {
 
 // Logique pour charger la playlist 
 async function loadPlaylist() {
+    // Si l'erreur 'auth is not defined' était ici, elle est maintenant corrigée.
     const allTracks = await readAllTracksFromDB(); 
     currentPlaylist = allTracks; 
 
