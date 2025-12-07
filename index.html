@@ -25,18 +25,7 @@
         };
 
         // Initialisation de Firebase
-        firebase.initializeApp(firebaseConfig);
-        // Assurez-vous que 'auth' est bien accessible globalement
-        const auth = firebase.auth(); 
-    
-        // Si l'erreur persiste après cette correction, essayez de retirer le 'const' 
-        // pour rendre la variable explicitement globale:
-        // auth = firebase.auth(); 
-
-        </script>
-
-        <script src="script.js"></script>
-    
+       
         const app = initializeApp(firebaseConfig);
         const analytics = getAnalytics(app);
         // Fin de l'exemple - Assurez-vous d'avoir les lignes initializeApp et const auth
@@ -225,6 +214,7 @@
     <script src="script.js"></script>
 </body>
 </html>
+
 
 
 
