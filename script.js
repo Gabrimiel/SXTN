@@ -129,6 +129,7 @@ function readFileAsDataURL(file) {
 }
 
 function getCurrentPlayer() {
+    // Retourne le player audio de référence (vocals en mode stem, sinon le player principal)
     if (currentPlaylist[currentIndex] && currentPlaylist[currentIndex].stems) {
         return document.getElementById('stem-vocals');
     }
@@ -375,8 +376,8 @@ function playTrack(index) {
     stopPlayback();
 
     const audioPlayer = document.getElementById('audio-player');
-    const playerToUse = track.stems ? document.getElementById('stem-vocals') : audioPlayer;
     const isStemMode = !!track.stems;
+    const playerToUse = isStemMode ? document.getElementById('stem-vocals') : audioPlayer; // Player de référence
 
     document.getElementById('stem-controls').style.display = isStemMode ? 'flex' : 'none';
     document.getElementById('delete-track-button').style.display = isAdmin ? 'block' : 'none'; 
@@ -400,11 +401,17 @@ function playTrack(index) {
     playerToUse.onended = playNext;
     displayTracklist(track.album);
     
-    // Appliquer les paramètres de volume et de vitesse existants lors du changement de piste
+    // --- CORRECTION : Appliquer les réglages de volume et vitesse à la nouvelle piste ---
     const volumeBar = document.getElementById('volume-bar');
     const speedBar = document.getElementById('speed-bar');
-    updateVolume(parseFloat(volumeBar.value));
-    updatePlaybackRate(parseFloat(speedBar.value));
+    
+    if (volumeBar) {
+        updateVolume(parseFloat(volumeBar.value));
+    }
+    if (speedBar) {
+        updatePlaybackRate(parseFloat(speedBar.value));
+    }
+    // -----------------------------------------------------------------------------------
 }
 
 function stopPlayback() {
@@ -425,7 +432,8 @@ function togglePlayPause() {
      
     const track = currentPlaylist[currentIndex];
     const isStemMode = track && track.stems;
-    const player = isStemMode ? document.getElementById('stem-vocals') : document.getElementById('audio-player');
+    // Utiliser la fonction pour obtenir le player de référence
+    const player = getCurrentPlayer(); 
     
     if (isPlaying) {
         player.pause();
@@ -487,13 +495,12 @@ function playPrevious() {
 function seekForward(seconds) {
     if (currentIndex === -1) return;
     
-    const track = currentPlaylist[currentIndex];
-    const isStemMode = track && track.stems;
-    const player = isStemMode ? document.getElementById('stem-vocals') : document.getElementById('audio-player');
+    const player = getCurrentPlayer(); 
     
     player.currentTime += seconds;
     
-    if (isStemMode) {
+    if (currentPlaylist[currentIndex] && currentPlaylist[currentIndex].stems) {
+        // Synchroniser tous les stems avec le player de référence
         document.getElementById('stem-bass').currentTime = player.currentTime;
         document.getElementById('stem-drums').currentTime = player.currentTime;
         document.getElementById('stem-other').currentTime = player.currentTime;
@@ -503,13 +510,12 @@ function seekForward(seconds) {
 function seekBackward(seconds) {
     if (currentIndex === -1) return;
 
-    const track = currentPlaylist[currentIndex];
-    const isStemMode = track && track.stems;
-    const player = isStemMode ? document.getElementById('stem-vocals') : document.getElementById('audio-player');
+    const player = getCurrentPlayer(); 
 
     player.currentTime -= seconds;
 
-    if (isStemMode) {
+    if (currentPlaylist[currentIndex] && currentPlaylist[currentIndex].stems) {
+        // Synchroniser tous les stems avec le player de référence
         document.getElementById('stem-bass').currentTime = player.currentTime;
         document.getElementById('stem-drums').currentTime = player.currentTime;
         document.getElementById('stem-other').currentTime = player.currentTime;
@@ -522,18 +528,16 @@ document.getElementById('progress-bar').addEventListener('input', () => {
     
     const newTime = document.getElementById('progress-bar').value;
     const track = currentPlaylist[currentIndex];
+    const player = getCurrentPlayer();
 
-    if (track) {
-        const mainPlayer = document.getElementById('audio-player');
-        
-        if (track.stems) {
-            document.getElementById('stem-vocals').currentTime = newTime;
-            document.getElementById('stem-bass').currentTime = newTime;
-            document.getElementById('stem-drums').currentTime = newTime;
-            document.getElementById('stem-other').currentTime = newTime;
-        } else {
-            mainPlayer.currentTime = newTime;
-        }
+    // Le player de référence gère le temps
+    player.currentTime = newTime;
+    
+    if (track && track.stems) {
+        // Synchroniser les autres stems
+        document.getElementById('stem-bass').currentTime = newTime;
+        document.getElementById('stem-drums').currentTime = newTime;
+        document.getElementById('stem-other').currentTime = newTime;
     }
 });
 
@@ -569,14 +573,17 @@ function setupStemButtons() {
 }
 
 // =========================================================
-// NOUVEAU : GESTION VOLUME ET VITESSE (Playback Rate)
+// GESTION VOLUME ET VITESSE
 // =========================================================
 
 function updateVolume(volume) {
     const mainPlayer = document.getElementById('audio-player');
     const stemPlayers = document.querySelectorAll('.stem-player');
 
-    mainPlayer.volume = volume;
+    // Applique le volume à la piste principale
+    mainPlayer.volume = volume; 
+    
+    // Applique le volume à tous les stems
     stemPlayers.forEach(player => player.volume = volume);
 }
 
@@ -593,5 +600,77 @@ function updatePlaybackRate(rate) {
 }
 
 
-// Lancement initial de la playlist au chargement de la page
-document.addEventListener('DOMContentLoaded', loadPlaylist);
+// =========================================================
+// INITIALISATION DE LA PAGE
+// =========================================================
+
+document.addEventListener('DOMContentLoaded', () => {
+    
+    // Logique pour les champs Stems dans le menu latéral
+    const stemModeOption = document.getElementById('stem-mode-option');
+    const manualStemFields = document.getElementById('manual-stem-fields');
+    if (stemModeOption) {
+        stemModeOption.addEventListener('change', () => {
+            manualStemFields.style.display = stemModeOption.checked ? 'block' : 'none';
+        });
+    }
+
+    // --- Gestion de la barre de progression (déjà en place) ---
+    const audioPlayerElement = document.getElementById('audio-player');
+    const progressBar = document.getElementById('progress-bar');
+    const currentTimeSpan = document.getElementById('current-time');
+    const durationSpan = document.getElementById('duration');
+    
+    function formatTime(seconds) {
+        if (isNaN(seconds) || seconds === Infinity) return "0:00";
+        const minutes = Math.floor(seconds / 60);
+        const remainingSeconds = Math.floor(seconds % 60);
+        return `${minutes}:${remainingSeconds < 10 ? '0' : ''}${remainingSeconds}`;
+    }
+
+    const updateTimeDisplay = (player) => {
+        const duration = player.duration;
+        durationSpan.textContent = formatTime(duration);
+        progressBar.max = duration;
+        
+        player.addEventListener('timeupdate', () => {
+            const currentTime = player.currentTime;
+            currentTimeSpan.textContent = formatTime(currentTime);
+            progressBar.value = currentTime;
+        });
+    }
+
+    if (audioPlayerElement) {
+        audioPlayerElement.addEventListener('loadedmetadata', () => updateTimeDisplay(audioPlayerElement));
+    }
+    
+    const stemVocals = document.getElementById('stem-vocals');
+    if (stemVocals) {
+        stemVocals.addEventListener('loadedmetadata', () => updateTimeDisplay(stemVocals));
+    }
+    // -------------------------------------------------------------
+
+
+    // --- NOUVEAU : Écouteur Volume ---
+    const volumeBar = document.getElementById('volume-bar');
+    if (volumeBar) {
+        volumeBar.addEventListener('input', (e) => {
+            updateVolume(parseFloat(e.target.value));
+        });
+        // Initialisation Volume
+        updateVolume(parseFloat(volumeBar.value));
+    }
+    
+    // --- NOUVEAU : Écouteur Vitesse ---
+    const speedBar = document.getElementById('speed-bar');
+    if (speedBar) {
+        speedBar.addEventListener('input', (e) => {
+            updatePlaybackRate(parseFloat(e.target.value));
+        });
+        // Initialisation Vitesse
+        updatePlaybackRate(parseFloat(speedBar.value));
+    }
+    
+    // Lancement initial de la playlist
+    loadPlaylist();
+});
