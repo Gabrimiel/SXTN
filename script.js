@@ -1,20 +1,124 @@
-// Variable globale pour stocker la playlist actuelle (temporaire, non persistante)
-let currentPlaylist = []; 
+// Variable globale pour stocker la playlist actuelle et l'état
+let currentPlaylist = [];
 let currentIndex = -1;
 let isPlaying = false;
-let isAdmin = false; 
+let isAdmin = false; // Nouvelle variable pour le mode Admin
+let activeAlbum = null; // Pour maintenir l'album affiché
 
 // Code secret pour l'accès Admin
 const ADMIN_CODE = "080216";
 
 // =========================================================
-// GESTION LECTEUR ET PLAYLIST (Version sans IndexedDB)
+// GESTION IndexedDB (Base de données locale pour les Morceaux - Global)
 // =========================================================
 
-/**
- * Fonction utilitaire pour lire un fichier en Base64.
- * C'est cette étape qui charge les données audio du fichier.
- */
+const DB_NAME = 'SXTNDatabase';
+const DB_VERSION = 1;
+const STORE_NAME = 'tracks';
+
+function openDB() {
+    return new Promise((resolve, reject) => {
+        const request = indexedDB.open(DB_NAME, DB_VERSION);
+
+        request.onerror = (event) => {
+            console.error("Erreur IndexedDB:", event.target.errorCode);
+            reject(event.target.errorCode);
+        };
+
+        request.onsuccess = (event) => {
+            resolve(event.target.result);
+        };
+
+        request.onupgradeneeded = (event) => {
+            const db = event.target.result;
+            if (!db.objectStoreNames.contains(STORE_NAME)) {
+                // Création du store
+                db.createObjectStore(STORE_NAME, { keyPath: 'id', autoIncrement: true });
+            }
+        };
+    });
+}
+
+async function addTrackToDB(trackData) {
+    const db = await openDB();
+    return new Promise((resolve, reject) => {
+        const transaction = db.transaction([STORE_NAME], 'readwrite');
+        const store = transaction.objectStore(STORE_NAME);
+
+        const request = store.add(trackData);
+        
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = (event) => {
+            console.error("Erreur d'ajout de morceau:", event.target.error);
+            reject(event.target.error);
+        };
+    });
+}
+
+async function readAllTracksFromDB() {
+    const db = await openDB();
+    return new Promise((resolve, reject) => {
+        const transaction = db.transaction([STORE_NAME], 'readonly');
+        const store = transaction.objectStore(STORE_NAME);
+        const request = store.getAll();
+
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = (event) => reject(event.target.error);
+    });
+}
+
+async function deleteTrackFromDB(trackId) {
+    const db = await openDB();
+    return new Promise((resolve, reject) => {
+        const transaction = db.transaction([STORE_NAME], 'readwrite');
+        const store = transaction.objectStore(STORE_NAME);
+        
+        const request = store.delete(trackId);
+
+        request.onsuccess = () => resolve(true);
+        request.onerror = (event) => {
+            console.error("Erreur de suppression:", event.target.error);
+            reject(event.target.error);
+        };
+    });
+}
+
+// =========================================================
+// GESTION MODE ADMIN & MENU
+// =========================================================
+
+function showAdminPrompt() {
+    if (isAdmin) {
+        alert("Mode Administrateur déjà activé.");
+        return;
+    }
+    const code = prompt("Entrez le code Admin pour accéder à l'importation de morceaux :");
+
+    if (code === ADMIN_CODE) {
+        isAdmin = true;
+        document.getElementById('admin-access-btn').textContent = "ADMIN (Activé)";
+        alert("Mode Administrateur activé ! Vous pouvez maintenant utiliser le menu ☰ pour importer des morceaux.");
+        updateAdminUI(); // Met à jour les éléments visibles
+    } else if (code !== null) {
+        alert("Code incorrect.");
+    }
+}
+
+function toggleSideMenu() {
+    const menu = document.getElementById('side-menu');
+    
+    if (!isAdmin && !menu.classList.contains('open')) {
+        alert("Vous devez activer le mode Administrateur (ADMIN ACCESS) pour importer des morceaux.");
+        return;
+    }
+    
+    menu.classList.toggle('open');
+}
+
+// =========================================================
+// GESTION LECTEUR ET PLAYLIST
+// =========================================================
+
 function readFileAsDataURL(file) {
     return new Promise((resolve, reject) => {
         const reader = new FileReader();
@@ -24,9 +128,6 @@ function readFileAsDataURL(file) {
     });
 }
 
-/**
- * Récupère l'élément AudioPlayer principal ou le Vocal Stem Player.
- */
 function getCurrentPlayer() {
     if (currentPlaylist[currentIndex] && currentPlaylist[currentIndex].stems) {
         return document.getElementById('stem-vocals');
@@ -50,9 +151,9 @@ async function addTrack() {
 
     let coverBase64 = "placeholder.png";
     let mainAudioBase64 = null;
-    let stemData = null;
+    let stemData = {};
 
-    // --- 1. Gérer la pochette ---
+    // 1. Gérer la pochette
     if (coverFile) {
         try {
             coverBase64 = await readFileAsDataURL(coverFile);
@@ -62,7 +163,7 @@ async function addTrack() {
         }
     }
 
-    // --- 2. Gérer les fichiers audio ---
+    // 2. Gérer les fichiers audio
     if (hasStems) {
         const vocalsFile = document.getElementById('stem-vocals-input').files[0];
         const bassFile = document.getElementById('stem-bass-input').files[0];
@@ -75,12 +176,10 @@ async function addTrack() {
         }
 
         try {
-            stemData = {
-                vocals: await readFileAsDataURL(vocalsFile),
-                bass: await readFileAsDataURL(bassFile),
-                drums: await readFileAsDataURL(drumsFile),
-                other: await readFileAsDataURL(otherFile)
-            };
+            stemData.vocals = await readFileAsDataURL(vocalsFile);
+            stemData.bass = await readFileAsDataURL(bassFile);
+            stemData.drums = await readFileAsDataURL(drumsFile);
+            stemData.other = await readFileAsDataURL(otherFile);
         } catch (e) {
             alert("Erreur de lecture d'un fichier Stem.");
             return;
@@ -99,45 +198,41 @@ async function addTrack() {
     }
 
     const trackData = {
-        // Nous utilisons Date.now() comme ID unique, car nous n'avons plus d'IndexedDB
-        id: Date.now(), 
         title: title,
         artist: artist,
         album: album,
         cover: coverBase64,
         mainAudio: mainAudioBase64,
-        stems: stemData,
+        stems: hasStems ? stemData : null,
     };
 
-    // AJOUT DIRECT au tableau temporaire de la playlist
-    currentPlaylist.push(trackData);
-    
-    alert(`Morceau "${title}" ajouté à la bibliothèque temporaire.`);
-    toggleSideMenu(); // Ferme le menu
-    loadPlaylist(); // Met à jour l'affichage
+    try {
+        await addTrackToDB(trackData);
+        alert(`Morceau "${title}" ajouté à la bibliothèque.`);
+        toggleSideMenu(); // Ferme le menu
+        await loadPlaylist(); // Recharge et affiche la nouvelle playlist
+    } catch (e) {
+        alert("Impossible d'ajouter le morceau à la base de données locale.");
+        console.error("Erreur d'ajout de piste:", e);
+    }
 }
 
-// SIMPLIFIÉE : Recharge et affiche la playlist temporaire
-function loadPlaylist() {
+async function loadPlaylist() {
+    const allTracks = await readAllTracksFromDB();  
+    currentPlaylist = allTracks; 
+
     const libraryMain = document.getElementById('library-main');
-    
     if (currentPlaylist.length === 0) {
-        // Logique d'affichage si la liste est vide (similaire à avant)
-        const emptyMessage = `
-            <div id="empty-library-message" style="padding: 20px; background: #eee; border-radius: 8px; text-align: center;">
-                Votre session de lecture est vide. ${isAdmin ? 'Importez des morceaux via le menu ☰.' : 'L\'Administrateur doit importer des morceaux.'} (Attention : les morceaux seront perdus au rechargement de la page)
-            </div>
-        `;
-        // Nous nous assurons que les conteneurs existent toujours pour l'affichage futur
         libraryMain.innerHTML = `
             <h2>LIBRARY</h2>
-            ${emptyMessage}
+            <div id="empty-library-message" style="padding: 20px; background: #eee; border-radius: 8px; text-align: center;">
+                Votre bibliothèque est vide. ${isAdmin ? 'Importez des morceaux via le menu ☰.' : 'L\'Administrateur doit importer des morceaux.'}
+            </div>
             <div id="album-carousel"></div>
             <div id="tracklist-container"><ul id="tracklist-ul"></ul></div>
         `;
     } else {
-        // Assurez-vous que les conteneurs sont présents pour displayAlbums/displayTracklist
-         if (!document.getElementById('album-carousel')) {
+        if (!document.getElementById('album-carousel')) {
              libraryMain.innerHTML = `
                 <h2>LIBRARY</h2>
                 <div id="album-carousel"></div>
@@ -145,66 +240,130 @@ function loadPlaylist() {
             `;
         }
         displayAlbums();
-        displayTracklist(null);
+        displayTracklist(activeAlbum);
     }
     
-    updateAdminUI(); 
+    updateAdminUI();  
 }
 
-function deleteTrack(trackId) {
+function updateAdminUI() {
+    document.getElementById('delete-track-button').style.display = isAdmin ? 'block' : 'none';
+    document.getElementById('admin-access-btn').textContent = isAdmin ? "ADMIN (Activé)" : "ADMIN ACCESS";
+
+    const emptyMessage = document.getElementById('empty-library-message');
+    if (emptyMessage) {
+        emptyMessage.textContent = isAdmin 
+            ? 'Votre bibliothèque est vide. Importez des morceaux via le menu ☰.' 
+            : 'Votre bibliothèque est vide. L\'Administrateur doit importer des morceaux.';
+    }
+}
+
+function displayAlbums() {
+    const carousel = document.getElementById('album-carousel');
+    if (!carousel) return; 
+    carousel.innerHTML = '';
+    
+    const albums = currentPlaylist.reduce((acc, track) => {
+        if (!acc[track.album]) {
+            acc[track.album] = {
+                album: track.album,
+                artist: track.artist,
+                cover: track.cover,
+                tracks: []
+            };
+        }
+        acc[track.album].tracks.push(track);
+        return acc;
+    }, {});
+
+    Object.values(albums).forEach(albumData => {
+        const card = document.createElement('div');
+        card.className = 'album-card';
+        card.setAttribute('data-album', albumData.album);
+        card.onclick = () => displayTracklist(albumData.album);
+
+        card.innerHTML = `
+            <img src="${albumData.cover}" alt="${albumData.album}" class="album-cover-img">
+            <div class="album-card-title">${albumData.album}</div>
+            <div class="album-card-artist">${albumData.artist}</div>
+        `;
+        carousel.appendChild(card);
+    });
+}
+
+
+function displayTracklist(albumName) {
+    const tracklistUl = document.getElementById('tracklist-ul');
+    if (!tracklistUl) return;
+    tracklistUl.innerHTML = '';
+    
+    document.querySelectorAll('.album-card').forEach(card => {
+        card.classList.remove('active-card');
+    });
+
+    if (albumName) {
+        activeAlbum = albumName;
+        const albumTracks = currentPlaylist.filter(track => track.album === albumName);
+        
+        const activeCard = document.querySelector(`.album-card[data-album="${albumName}"]`);
+        if (activeCard) {
+            activeCard.classList.add('active-card');
+        }
+
+        albumTracks.forEach((track, index) => {
+            const globalIndex = currentPlaylist.findIndex(t => t.id === track.id);
+
+            const li = document.createElement('li');
+            li.className = `track-item ${globalIndex === currentIndex ? 'active-track' : ''}`;
+            li.setAttribute('data-index', globalIndex);
+            
+            li.onclick = () => playTrack(globalIndex);
+
+            const playText = track.stems ? ' [STEMS]' : '';
+
+            li.innerHTML = `
+                <div class="track-item-info">
+                    <img src="${track.cover}" alt="Cover" class="track-item-cover">
+                    <span class="track-item-title">${track.title}</span>
+                    <span style="font-size: 0.8em; color: ${globalIndex === currentIndex ? 'white' : '#777'};">${playText}</span>
+                </div>
+                <div class="track-controls">
+                     ${isAdmin ? `<button onclick="event.stopPropagation(); deleteTrack(${track.id})" class="track-delete-button">🗑️</button>` : ''}
+                </div>
+            `;
+            tracklistUl.appendChild(li);
+        });
+    } else {
+        activeAlbum = null;
+        tracklistUl.innerHTML = '<li>Sélectionnez un album ci-dessus.</li>';
+    }
+}
+
+async function deleteTrack(trackId) {
     if (!isAdmin) {
         alert("Seul l'Administrateur peut supprimer des morceaux.");
         return;
     }
     
-    if (!confirm("Êtes-vous sûr de vouloir supprimer ce morceau de cette session ? (Il sera perdu de toute façon au rechargement)")) {
+    if (!confirm("Êtes-vous sûr de vouloir supprimer ce morceau ? (Cette action est permanente)")) {
         return;
     }
-    
-    // Suppression du tableau local
-    const initialLength = currentPlaylist.length;
-    currentPlaylist = currentPlaylist.filter(track => track.id !== trackId);
 
-    if (currentPlaylist.length < initialLength) {
-        alert("Morceau supprimé de la session.");
-
-        // Réinitialiser le player si le morceau en cours est supprimé
-        if (currentIndex !== -1 && currentPlaylist[currentIndex] && currentPlaylist[currentIndex].id === trackId) {
+    try {
+        await deleteTrackFromDB(trackId);
+        alert("Morceau supprimé.");
+        
+        if (currentPlaylist[currentIndex] && currentPlaylist[currentIndex].id === trackId) {
             stopPlayback();
         }
 
-        // Réajuster l'index si la suppression affecte l'ordre
-        if (currentIndex >= currentPlaylist.length) {
-             currentIndex = currentPlaylist.length > 0 ? currentPlaylist.length - 1 : -1;
-        }
-
-        loadPlaylist();
-        displayTracklist(activeAlbum);
-    } else {
+        await loadPlaylist(); 
+        displayTracklist(activeAlbum); 
+    } catch (e) {
         alert("Erreur lors de la suppression du morceau.");
+        console.error(e);
     }
 }
-
-
-// Les fonctions showAdminPrompt, toggleSideMenu, updateAdminUI, displayAlbums, displayTracklist,
-// playTrack, stopPlayback, togglePlayPause, playAllPlayers, playNext, playPrevious, seekForward,
-// seekBackward, setupStemButtons sont inchangées dans leur logique de lecture.
-// Je ne les réécris pas ici par souci de concision, mais vous devez les maintenir.
-// **Assurez-vous que les dépendances IndexedDB (openDB, addTrackToDB, readAllTracksFromDB) ont été retirées de votre script.js.**
-
-
-// =========================================================
-// FONCTIONS DE LECTURE (MAINTENUES)
-// =========================================================
-
-// (Laisser ici toutes les fonctions de lecture comme playTrack, togglePlayPause, etc.)
-
-function showAdminPrompt() { /* ... */ }
-function toggleSideMenu() { /* ... */ }
-function updateAdminUI() { /* ... */ }
-function displayAlbums() { /* ... */ }
-function displayTracklist(albumName) { /* ... */ }
-// Note: deleteTrack a été mis à jour ci-dessus.
 
 function playTrack(index) {
     currentIndex = index;
@@ -253,6 +412,7 @@ function stopPlayback() {
     document.getElementById('audio-player').currentTime = 0;
 }
 
+
 function togglePlayPause() {
      if (currentIndex === -1 || currentPlaylist.length === 0) return;
      
@@ -299,6 +459,7 @@ function playAllPlayers() {
         document.getElementById('stem-other').play();
     }
 }
+
 
 function playNext() {
     if (currentIndex < currentPlaylist.length - 1) {
@@ -348,6 +509,27 @@ function seekBackward(seconds) {
     }
 }
 
+document.getElementById('progress-bar').addEventListener('input', () => {
+    if (currentIndex === -1) return;
+    
+    const newTime = document.getElementById('progress-bar').value;
+    const track = currentPlaylist[currentIndex];
+
+    if (track) {
+        const mainPlayer = document.getElementById('audio-player');
+        
+        if (track.stems) {
+            document.getElementById('stem-vocals').currentTime = newTime;
+            document.getElementById('stem-bass').currentTime = newTime;
+            document.getElementById('stem-drums').currentTime = newTime;
+            document.getElementById('stem-other').currentTime = newTime;
+        } else {
+            mainPlayer.currentTime = newTime;
+        }
+    }
+});
+
+
 function setupStemButtons() {
     const stemContainer = document.getElementById('stem-container');
     stemContainer.innerHTML = '';
@@ -379,54 +561,5 @@ function setupStemButtons() {
     });
 }
 
-// Lancement initial de la playlist (vide si non-persistante)
+// Lancement initial de la playlist au chargement de la page
 document.addEventListener('DOMContentLoaded', loadPlaylist);
-
-
-// =========================================================
-// FONCTIONS ADMINISTRATEUR (MAINTENUES)
-// =========================================================
-
-function showAdminPrompt() {
-    if (isAdmin) {
-        alert("Mode Administrateur déjà activé.");
-        return;
-    }
-    const code = prompt("Entrez le code Admin pour accéder à l'importation de morceaux :");
-
-    if (code === ADMIN_CODE) {
-        isAdmin = true;
-        document.getElementById('admin-access-btn').textContent = "ADMIN (Activé)";
-        alert("Mode Administrateur activé ! Vous pouvez maintenant utiliser le menu ☰ pour importer des morceaux.");
-    } else if (code !== null) {
-        alert("Code incorrect.");
-    }
-}
-
-function toggleSideMenu() {
-    const menu = document.getElementById('side-menu');
-    
-    if (!isAdmin && !menu.classList.contains('open')) {
-        alert("Vous devez activer le mode Administrateur (ADMIN ACCESS) pour importer des morceaux.");
-        return;
-    }
-    
-    menu.classList.toggle('open');
-}
-
-function updateAdminUI() {
-    // Affiche le bouton supprimer seulement si Admin
-    document.getElementById('delete-track-button').style.display = isAdmin ? 'block' : 'none';
-    
-    // Met à jour le texte du bouton Admin
-    document.getElementById('admin-access-btn').textContent = isAdmin ? "ADMIN (Activé)" : "ADMIN ACCESS";
-
-    // Met à jour le message de la bibliothèque si elle est vide
-    const emptyMessage = document.getElementById('empty-library-message');
-    if (emptyMessage) {
-        emptyMessage.innerHTML = `Votre session de lecture est vide. ${isAdmin ? 'Importez des morceaux via le menu ☰.' : 'L\'Administrateur doit importer des morceaux.'} (Attention : les morceaux seront perdus au rechargement de la page)`;
-    }
-}
-
-// Les fonctions displayAlbums et displayTracklist sont maintenues (elles lisent currentPlaylist)
-// ...
