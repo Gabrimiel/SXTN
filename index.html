@@ -60,7 +60,7 @@
             <h2>LIBRARY</h2>
             
             <div id="album-carousel">
-                </div>
+            </div>
 
             <div id="tracklist-container">
                 <ul id="tracklist-ul">
@@ -98,6 +98,19 @@
             </div>
 
             <div id="right-controls-area">
+                
+                <div id="player-settings">
+                    <div id="volume-control">
+                        <span>🔊</span>
+                        <input type="range" id="volume-bar" min="0" max="1" step="0.1" value="1">
+                    </div>
+                    
+                    <div id="speed-control">
+                        <span id="speed-display">1.0x</span>
+                        <input type="range" id="speed-bar" min="0.5" max="2.0" step="0.1" value="1.0">
+                    </div>
+                </div>
+                
                 <div id="stem-controls" style="display: none;">
                     <div id="stem-container" style="display: flex; gap: 5px; padding: 0;"></div>
                     <audio id="stem-vocals" preload="auto" class="stem-player"></audio>
@@ -105,12 +118,13 @@
                     <audio id="stem-drums" preload="auto" class="stem-player"></audio>
                     <audio id="stem-other" preload="auto" class="stem-player"></audio>
                 </div>
-                <button id="delete-track-button" onclick="deleteCurrentTrack()" style="background-color: transparent; color: #cc3333; display: none; margin-left: 15px;">🗑️</button>
+                <button id="delete-track-button" onclick="deleteCurrentTrack()" style="background-color: transparent; color: #cc3333; display: none;">🗑️</button>
             </div>
         </footer>
     </div>
 
     <script>
+        // Logique pour les champs Stems dans le menu latéral
         document.addEventListener('DOMContentLoaded', () => {
             const stemModeOption = document.getElementById('stem-mode-option');
             const manualStemFields = document.getElementById('manual-stem-fields');
@@ -125,6 +139,13 @@
             const currentTimeSpan = document.getElementById('current-time');
             const durationSpan = document.getElementById('duration');
             
+            function formatTime(seconds) {
+                if (isNaN(seconds) || seconds === Infinity) return "0:00";
+                const minutes = Math.floor(seconds / 60);
+                const remainingSeconds = Math.floor(seconds % 60);
+                return `${minutes}:${remainingSeconds < 10 ? '0' : ''}${remainingSeconds}`;
+            }
+
             audioPlayerElement.addEventListener('loadedmetadata', () => {
                 const duration = audioPlayerElement.duration;
                 durationSpan.textContent = formatTime(duration);
@@ -143,13 +164,6 @@
                 player.currentTime = progressBar.value;
             });
 
-            function formatTime(seconds) {
-                if (isNaN(seconds) || seconds === Infinity) return "0:00";
-                const minutes = Math.floor(seconds / 60);
-                const remainingSeconds = Math.floor(seconds % 60);
-                return `${minutes}:${remainingSeconds < 10 ? '0' : ''}${remainingSeconds}`;
-            }
-
             // Pour les stems, on écoute le vocal player comme référence pour l'UI
             const stemVocals = document.getElementById('stem-vocals');
             stemVocals.addEventListener('loadedmetadata', () => {
@@ -164,6 +178,21 @@
                 progressBar.value = currentTime;
             });
 
+            // --- NOUVEAU : Écouteur Volume ---
+            const volumeBar = document.getElementById('volume-bar');
+            volumeBar.addEventListener('input', (e) => {
+                updateVolume(parseFloat(e.target.value));
+            });
+            
+            // --- NOUVEAU : Écouteur Vitesse ---
+            const speedBar = document.getElementById('speed-bar');
+            speedBar.addEventListener('input', (e) => {
+                updatePlaybackRate(parseFloat(e.target.value));
+            });
+            
+            // Initialisation Volume/Vitesse
+            updateVolume(parseFloat(volumeBar.value));
+            updatePlaybackRate(parseFloat(speedBar.value));
         });
     </script>
     
