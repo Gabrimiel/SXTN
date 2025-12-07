@@ -3,120 +3,170 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SXTN Player - Stem Mixer</title>
+    <title>SXTN - Music Player (Compact)</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
+    
+    <div id="app-container" style="display: flex;">
 
-    <audio id="audio-player" class="player-hidden"></audio>
-    <audio id="stem-vocals" class="stem-player player-hidden"></audio>
-    <audio id="stem-bass" class="stem-player player-hidden"></audio>
-    <audio id="stem-drums" class="stem-player player-hidden"></audio>
-    <audio id="stem-other" class="stem-player player-hidden"></audio>
+        <header id="main-header">
+            <div id="logo-icon">
+                <img src="logo.png" alt="Logo SXTN" id="site-logo">
+            </div>
+            <div id="search-bar">
+                <input type="text" placeholder="RECHERCHE">
+            </div>
+            
+            <button id="admin-access-btn" onclick="showAdminPrompt()">ADMIN ACCESS</button>
+            
+            <button id="menu-toggle" onclick="toggleSideMenu()">☰</button>
+        </header>
 
-    <div id="side-menu" class="side-menu">
-        <button class="close-btn" onclick="toggleSideMenu()">✖️</button>
-        <h2>ADMIN : Importer Morceau</h2>
-        
-        <label for="music-title">Titre du Morceau :</label>
-        <input type="text" id="music-title" placeholder="Nom du titre" required>
+        <div id="side-menu">
+            <button id="close-menu-btn" onclick="toggleSideMenu()">✖️ Fermer</button>
+            <div class="import-section">
+                <h2>Importer un Morceau</h2>
+                <input type="text" id="music-title" placeholder="Titre du Morceau (optionnel)">
+                <input type="text" id="music-artist" placeholder="Nom de l'Album">
+                <input type="text" id="music-description" placeholder="Artiste">
 
-        <label for="music-description">Artiste :</label>
-        <input type="text" id="music-description" placeholder="Nom de l'artiste" required>
-        
-        <label for="music-artist">Album :</label>
-        <input type="text" id="music-artist" placeholder="Nom de l'album" required>
+                <label for="stem-mode-option" style="margin-top: 15px; display: block; font-weight: bold;">
+                    <input type="checkbox" id="stem-mode-option"> 
+                    J'ai mes propres Stems
+                </label>
 
-        <label for="cover-file">Image de couverture :</label>
-        <input type="file" id="cover-file" accept="image/*">
+                <label for="cover-input" style="margin-top: 10px;">Image de Couverture (optionnel) :</label>
+                <input type="file" id="cover-input" accept="image/*">
 
-        <hr>
+                <label for="audio-input" style="margin-top: 10px;">Fichier Audio Principal (Optionnel si Stems fournies) :</label>
+                <input type="file" id="audio-input" accept="audio/*">
 
-        <label for="stem-mode-option" style="display: block; margin-bottom: 10px;">
-            <input type="checkbox" id="stem-mode-option" onchange="toggleStemInputs()"> Mode Stem Activé
-        </label>
-        
-        <div id="simple-audio-fields">
-            <label for="audio-file">Fichier audio principal (.mp3) :</label>
-            <input type="file" id="audio-file" accept=".mp3">
+                <div id="manual-stem-fields" style="display:none; margin-top: 20px; padding: 10px; border: 1px dashed #777;">
+                    <h3>Fichiers Stems</h3>
+                    <label for="stem-vocals-input">Voix (Vocals) :</label>
+                    <input type="file" id="stem-vocals-input" accept="audio/*">
+                    <label for="stem-bass-input">Basses (Bass) :</label>
+                    <input type="file" id="stem-bass-input" accept="audio/*">
+                    <label for="stem-drums-input">Batterie (Drums) :</label>
+                    <input type="file" id="stem-drums-input" accept="audio/*">
+                    <label for="stem-other-input">Autres (Other / Mélodie) :</label>
+                    <input type="file" id="stem-other-input" accept="audio/*">
+                </div>
+                <button onclick="addTrack()">Ajouter à la Bibliothèque</button>
+            </div>
         </div>
+        <main id="library-main">
+            <h2>LIBRARY</h2>
+            
+            <div id="album-carousel">
+                </div>
 
-        <div id="stem-fields" style="display: none;">
-            <label for="stem-vocals-file">Voix (.mp3) :</label>
-            <input type="file" id="stem-vocals-file" accept=".mp3">
+            <div id="tracklist-container">
+                <ul id="tracklist-ul">
+                    <li>Sélectionnez un album ci-dessus.</li>
+                </ul>
+            </div>
+        </main>
+        
+        <footer id="global-player-footer">
             
-            <label for="stem-bass-file">Basse (.mp3) :</label>
-            <input type="file" id="stem-bass-file" accept=".mp3">
-            
-            <label for="stem-drums-file">Batterie (.mp3) :</label>
-            <input type="file" id="stem-drums-file" accept=".mp3">
-            
-            <label for="stem-other-file">Musique/Autres (.mp3) :</label>
-            <input type="file" id="stem-other-file" accept=".mp3">
-        </div>
+            <div id="current-info-footer">
+                <img id="current-cover-footer" src="placeholder.png" alt="Cover" style="width: 40px; height: 40px; border-radius: 4px; margin-right: 10px;">
+                <div>
+                    <div id="current-title-footer">Titre du Morceau</div>
+                    <div id="current-artist-footer">Artiste Inconnu</div>
+                </div>
+            </div>
 
-        <button onclick="addTrack()" class="add-track-btn">Ajouter à la Bibliothèque</button>
+            <div id="center-playback-area">
+                
+                <div id="footer-controls">
+                    <button onclick="playPrevious()">⏮️</button>
+                    <button onclick="seekBackward(10)">⏪ 10s</button>
+                    <button id="play-pause-button" onclick="togglePlayPause()">▶️</button>
+                    <button onclick="seekForward(10)">⏩ 10s</button>
+                    <button onclick="playNext()">⏭️</button>
+                </div>
+
+                <div id="playback-bar">
+                    <span id="current-time">0:00</span>
+                    <audio id="audio-player" preload="auto" data-current-index="-1"></audio>
+                    <input type="range" id="progress-bar" value="0" min="0" max="100" step="0.1">
+                    <span id="duration">0:00</span>
+                </div>
+            </div>
+
+            <div id="right-controls-area">
+                <div id="stem-controls" style="display: none;">
+                    <div id="stem-container" style="display: flex; gap: 5px; padding: 0;"></div>
+                    <audio id="stem-vocals" preload="auto" class="stem-player"></audio>
+                    <audio id="stem-bass" preload="auto" class="stem-player"></audio>
+                    <audio id="stem-drums" preload="auto" class="stem-player"></audio>
+                    <audio id="stem-other" preload="auto" class="stem-player"></audio>
+                </div>
+                <button id="delete-track-button" onclick="deleteCurrentTrack()" style="background-color: transparent; color: #cc3333; display: none; margin-left: 15px;">🗑️</button>
+            </div>
+        </footer>
     </div>
 
-    <header>
-        <div class="menu-left">
-            <button id="admin-menu-btn" onclick="toggleSideMenu()">☰</button>
-        </div>
-        <h1>SXTN Player</h1>
-        <div class="menu-right">
-            <button id="admin-access-btn" onclick="showAdminPrompt()">ADMIN ACCESS</button>
-        </div>
-    </header>
-
-    <main id="library-main">
-        <h2>LIBRARY</h2>
-        <div id="album-carousel"></div>
-        <div id="tracklist-container"><ul id="tracklist-ul"></ul></div>
-    </main>
-
-    <footer>
-        <div id="controls-left">
-            <img id="current-cover-footer" src="logo.png" alt="Couverture de l'album" class="footer-cover">
-            <div class="track-info">
-                <div id="current-title-footer">Aucun Morceau</div>
-                <div id="current-artist-footer"></div>
-            </div>
-            <button id="delete-track-button" style="display: none;" onclick="deleteTrack(currentPlaylist[currentIndex].id)">🗑️</button>
-        </div>
-
-        <div id="controls-center">
-            <div class="playback-buttons">
-                <button onclick="playPrevious()">⏮️</button>
-                <button onclick="seekBackward(10)">⏪ 10s</button>
-                <button id="play-pause-button" onclick="togglePlayPause()">▶️</button>
-                <button onclick="seekForward(10)">⏩ 10s</button>
-                <button onclick="playNext()">⏭️</button>
-            </div>
-            
-            <div class="progress-bar-container">
-                <span id="time-display">0:00</span>
-                <input type="range" id="progress-bar" min="0" max="100" value="0" step="0.01">
-                <span id="duration-display">0:00</span>
-            </div>
-
-            <div id="stem-controls" style="display: none;">
-                <div id="stem-container" class="stem-buttons-container">
-                    </div>
-            </div>
-        </div>
-        
-        <div id="controls-right">
-            </div>
-    </footer>
-
-    <script src="script.js"></script>
     <script>
-        // Fonction pour gérer l'affichage des champs Stem/Audio Simple
-        function toggleStemInputs() {
-            const isStem = document.getElementById('stem-mode-option').checked;
-            document.getElementById('stem-fields').style.display = isStem ? 'block' : 'none';
-            document.getElementById('simple-audio-fields').style.display = isStem ? 'none' : 'block';
-        }
+        document.addEventListener('DOMContentLoaded', () => {
+            const stemModeOption = document.getElementById('stem-mode-option');
+            const manualStemFields = document.getElementById('manual-stem-fields');
+            
+            stemModeOption.addEventListener('change', () => {
+                manualStemFields.style.display = stemModeOption.checked ? 'block' : 'none';
+            });
+            
+            // Logique pour mettre à jour la barre de progression (visuel seulement)
+            const audioPlayerElement = document.getElementById('audio-player');
+            const progressBar = document.getElementById('progress-bar');
+            const currentTimeSpan = document.getElementById('current-time');
+            const durationSpan = document.getElementById('duration');
+            
+            audioPlayerElement.addEventListener('loadedmetadata', () => {
+                const duration = audioPlayerElement.duration;
+                durationSpan.textContent = formatTime(duration);
+                progressBar.max = duration;
+            });
+
+            audioPlayerElement.addEventListener('timeupdate', () => {
+                const currentTime = audioPlayerElement.currentTime;
+                currentTimeSpan.textContent = formatTime(currentTime);
+                progressBar.value = currentTime;
+            });
+            
+            progressBar.addEventListener('input', () => {
+                // Si l'utilisateur manipule la barre, on ajuste la position de lecture
+                const player = getCurrentPlayer(); 
+                player.currentTime = progressBar.value;
+            });
+
+            function formatTime(seconds) {
+                if (isNaN(seconds) || seconds === Infinity) return "0:00";
+                const minutes = Math.floor(seconds / 60);
+                const remainingSeconds = Math.floor(seconds % 60);
+                return `${minutes}:${remainingSeconds < 10 ? '0' : ''}${remainingSeconds}`;
+            }
+
+            // Pour les stems, on écoute le vocal player comme référence pour l'UI
+            const stemVocals = document.getElementById('stem-vocals');
+            stemVocals.addEventListener('loadedmetadata', () => {
+                const duration = stemVocals.duration;
+                durationSpan.textContent = formatTime(duration);
+                progressBar.max = duration;
+            });
+            
+            stemVocals.addEventListener('timeupdate', () => {
+                const currentTime = stemVocals.currentTime;
+                currentTimeSpan.textContent = formatTime(currentTime);
+                progressBar.value = currentTime;
+            });
+
+        });
     </script>
+    
+    <script src="script.js"></script>
 </body>
 </html>
