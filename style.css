@@ -299,7 +299,7 @@ h1, h2 {
     color: #ffcccc;
 }
 
-/* 4. FOOTER GLOBAL PLAYER (Corrections de débordement et de centrage) */
+/* 4. FOOTER GLOBAL PLAYER (Finalisé pour l'Alignement) */
 #global-player-footer {
     position: fixed;
     bottom: 0;
@@ -320,7 +320,7 @@ h1, h2 {
 #current-info-footer {
     display: flex;
     align-items: center;
-    flex: 1 1 200px; /* Flexible mais prend au moins 200px */
+    flex: 1 1 200px; 
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -332,9 +332,11 @@ h1, h2 {
     display: flex;
     flex-direction: column;
     align-items: center;
-    flex: 2 1 350px; /* Zone principale qui prend l'espace central */
+    /* On utilise max-width pour centrer le bloc, mais flex-grow pour qu'il prenne de la place */
+    flex-grow: 1; 
     max-width: 600px; 
     padding: 0 10px;
+    margin: 0 auto; /* Ajout de la marge auto pour le centrage si le flex-grow ne suffit pas */
 }
 
 /* Contrôles de lecture (Précédent, Pause/Play, Suivant...) */
@@ -379,7 +381,7 @@ h1, h2 {
     display: flex;
     align-items: center;
     gap: 15px; 
-    flex: 0 0 auto; /* IMPORTANT : Empêche cette zone de se réduire pour éviter le débordement */
+    flex: 0 0 auto; 
     padding-right: 0px; 
     justify-content: flex-end; 
     min-width: 200px; 
@@ -456,12 +458,13 @@ h1, h2 {
         order: 3; 
         margin-top: 10px; 
         padding: 0;
+        margin: 0; /* Annuler la marge auto pour le petit écran */
     }
 
     #right-controls-area {
         width: 100%;
         flex-grow: 1; 
-        justify-content: space-between; /* Distribue les éléments sur la ligne */
+        justify-content: space-between; 
         order: 2; 
         margin-bottom: 5px;
         min-width: 100px;
