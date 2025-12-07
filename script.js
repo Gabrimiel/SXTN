@@ -8,16 +8,35 @@ let syncInterval = null;
 // Code secret pour l'accès Admin
 const ADMIN_CODE = "080216";
 
-// Définition de la structure des Stems pour la convention de nommage
-const STEM_SUFFIXES = {
-    vocals: '_Vocals.mp3',
-    bass: '_Bass.mp3',
-    drums: '_Drums.mp3',
-    other: '_Music.mp3' // Renommé 'other' en 'Music' pour correspondre à votre exemple
-};
+// Définition de la structure des Stems (pour la lecture)
+const STEM_PLAYER_IDS = ['stem-vocals', 'stem-bass', 'stem-drums', 'stem-other'];
+const STEM_FILE_INPUT_IDS = ['stem-vocals-file', 'stem-bass-file', 'stem-drums-file', 'stem-other-file'];
+
+// =========================================================
+// FONCTIONS DE CONVERSION BASE64
+// =========================================================
+
+/**
+ * Lit un fichier local et retourne son contenu encodé en Base64.
+ * @param {File} file Le fichier à lire.
+ * @returns {Promise<string>} Le contenu du fichier en Base64.
+ */
+function fileToBase64(file) {
+    return new Promise((resolve, reject) => {
+        if (!file) {
+            resolve(null); // Retourne null si aucun fichier n'est fourni
+            return;
+        }
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = error => reject(error);
+    });
+}
 
 // =========================================================
 // GESTION IndexedDB (Base de données locale pour les Morceaux - Global)
+// (Le code IndexedDB reste le même)
 // =========================================================
 
 const DB_NAME = 'SXTNDatabase';
@@ -91,7 +110,7 @@ async function deleteTrackFromDB(trackId) {
 }
 
 // =========================================================
-// GESTION MODE ADMIN (Fonction corrigée, résout l'erreur 'showAdminPrompt is not defined')
+// GESTION MODE ADMIN (Reste le même, résout 'showAdminPrompt is not defined')
 // =========================================================
 
 function showAdminPrompt() {
@@ -115,7 +134,6 @@ function showAdminPrompt() {
 function toggleSideMenu() {
     const menu = document.getElementById('side-menu');
     
-    // N'ouvrir le menu que si l'Admin est actif, ou s'il est déjà ouvert
     if (!isAdmin && !menu.classList.contains('open')) {
         alert("Vous devez activer le mode Administrateur (ADMIN ACCESS) pour importer des morceaux.");
         return;
@@ -128,7 +146,7 @@ function toggleSideMenu() {
 // GESTION LECTEUR ET PLAYLIST
 // =========================================================
 
-// LOGIQUE D'AJOUT DE MORCEAU (Correction: utilise logo.png par défaut)
+// LOGIQUE D'AJOUT DE MORCEAU (Retour au Base64)
 async function addTrack() {
     if (!isAdmin) {
         alert("Seul l'Administrateur peut ajouter des morceaux.");
@@ -139,35 +157,51 @@ async function addTrack() {
     const artist = document.getElementById('music-description').value || "Artiste Inconnu";
     const album = document.getElementById('music-artist').value || "Album Inconnu";
     
-    // CORRECTION: Chemin par défaut vers logo.png (qui existe dans votre dépôt)
-    const coverPath = document.getElementById('cover-path').value || "logo.png"; 
-    
+    const coverFile = document.getElementById('cover-file').files[0];
     const hasStems = document.getElementById('stem-mode-option').checked;
 
-    let mainAudioPath = null;
-    let stemBasePath = null; 
+    let coverBase64 = null;
+    let mainAudioBase64 = null; 
+    let stemsBase64 = {}; 
+
+    if (!coverFile) {
+        coverBase64 = "logo.png"; // Utilisation de l'image du dépôt si pas de fichier
+    } else {
+        coverBase64 = await fileToBase64(coverFile);
+    }
 
     if (hasStems) {
-        stemBasePath = document.getElementById('stem-base-path').value;
-        if (!stemBasePath) {
-             alert("Veuillez fournir le chemin de base du Stem (ex: audio/stems/Nom_du_morceau).");
-             return;
+        const stemFiles = {
+            vocals: document.getElementById('stem-vocals-file').files[0],
+            bass: document.getElementById('stem-bass-file').files[0],
+            drums: document.getElementById('stem-drums-file').files[0],
+            other: document.getElementById('stem-other-file').files[0]
+        };
+
+        // Vérification que tous les Stems sont présents
+        for (const [key, file] of Object.entries(stemFiles)) {
+            if (!file) {
+                 alert(`Veuillez fournir le fichier pour le Stem ${key}.`);
+                 return;
+            }
+            stemsBase64[key] = await fileToBase64(file);
         }
     } else {
-        mainAudioPath = document.getElementById('audio-path').value;
-        if (!mainAudioPath) {
-            alert("Veuillez fournir le chemin du fichier Audio Principal.");
+        const audioFile = document.getElementById('audio-file').files[0];
+        if (!audioFile) {
+            alert("Veuillez fournir le fichier Audio Principal.");
             return;
         }
+        mainAudioBase64 = await fileToBase64(audioFile);
     }
 
     const trackData = {
         title: title,
         artist: artist,
         album: album,
-        cover: coverPath,          // URL de la pochette
-        mainAudio: mainAudioPath,  // URL de l'audio principal
-        stems: hasStems ? stemBasePath : null, // URL de base des Stems
+        cover: coverBase64,           // Base64 ou chemin 'logo.png'
+        mainAudio: mainAudioBase64,   // Base64 de l'audio principal
+        stems: hasStems ? stemsBase64 : null, // Objet contenant les Base64 des Stems
     };
 
     try {
@@ -182,9 +216,8 @@ async function addTrack() {
 }
 
 
-// Logique pour charger la playlist 
+// Logique de chargement de la playlist (reste la même)
 async function loadPlaylist() {
-    // Si l'erreur 'auth is not defined' était ici, elle est maintenant corrigée.
     const allTracks = await readAllTracksFromDB(); 
     currentPlaylist = allTracks; 
 
@@ -213,7 +246,7 @@ async function loadPlaylist() {
     updateAdminUI(); 
 }
 
-// Logique pour mettre à jour l'interface Admin 
+// Logique pour mettre à jour l'interface Admin (reste la même)
 function updateAdminUI() {
     document.getElementById('delete-track-button').style.display = isAdmin ? 'block' : 'none';
     
@@ -227,7 +260,7 @@ function updateAdminUI() {
     }
 }
 
-// Logique d'affichage des albums 
+// Logique d'affichage des albums (reste la même)
 function displayAlbums() {
     const carousel = document.getElementById('album-carousel');
     if (!carousel) return; 
@@ -263,7 +296,7 @@ function displayAlbums() {
 
 let activeAlbum = null;
 
-// Logique d'affichage de la liste des morceaux 
+// Logique d'affichage de la liste des morceaux (reste la même)
 function displayTracklist(albumName) {
     const tracklistUl = document.getElementById('tracklist-ul');
     if (!tracklistUl) return;
@@ -311,7 +344,7 @@ function displayTracklist(albumName) {
     }
 }
 
-// Logique de suppression de morceau 
+// Logique de suppression de morceau (reste la même)
 async function deleteTrack(trackId) {
     if (!isAdmin) {
         alert("Seul l'Administrateur peut supprimer des morceaux.");
@@ -338,7 +371,7 @@ async function deleteTrack(trackId) {
     }
 }
 
-// Logique de lecture d'un morceau (Mise à jour pour les URL)
+// Logique de lecture d'un morceau (Retour au Base64)
 function playTrack(index) {
     currentIndex = index;
     const track = currentPlaylist[currentIndex];
@@ -360,12 +393,11 @@ function playTrack(index) {
     document.getElementById('current-artist-footer').textContent = `${track.artist} - Album: ${track.album}`;
 
     if (isStemMode) {
-        // CONVENTION DE NOMMAGE : on reconstruit les chemins des Stems
-        const stemBasePath = track.stems;
-        document.getElementById('stem-vocals').src = stemBasePath + STEM_SUFFIXES.vocals;
-        document.getElementById('stem-bass').src = stemBasePath + STEM_SUFFIXES.bass;
-        document.getElementById('stem-drums').src = stemBasePath + STEM_SUFFIXES.drums;
-        document.getElementById('stem-other').src = stemBasePath + STEM_SUFFIXES.other;
+        // ASSIGNATION DES DONNÉES BASE64 pour la lecture
+        document.getElementById('stem-vocals').src = track.stems.vocals;
+        document.getElementById('stem-bass').src = track.stems.bass;
+        document.getElementById('stem-drums').src = track.stems.drums;
+        document.getElementById('stem-other').src = track.stems.other;
         setupStemButtons();
     } else {
         audioPlayer.src = track.mainAudio;
@@ -373,7 +405,6 @@ function playTrack(index) {
     
     // Le onloadedmetadata garantit que le fichier est prêt avant de lancer la lecture synchronisée
     playerToUse.onloadedmetadata = () => {
-        // Réinitialiser la barre de progression au cas où la durée change
         const duration = playerToUse.duration;
         document.getElementById('progress-bar').max = duration; 
         document.getElementById('duration-display').textContent = formatTime(duration);
@@ -381,8 +412,7 @@ function playTrack(index) {
         playAllPlayers();
     };
     
-    // Si le fichier est déjà chargé (cache), on peut lancer directement
-    if (playerToUse.readyState >= 2) { // 2 = HAVE_CURRENT_DATA
+    if (playerToUse.readyState >= 2) { 
         playAllPlayers();
     }
 
@@ -390,6 +420,8 @@ function playTrack(index) {
     playerToUse.onended = playNext;
     displayTracklist(track.album);
 }
+
+// ... (Le reste du code de lecture, synchro et utilitaire reste le même)
 
 // Fonction utilitaire pour le formatage du temps (pour la barre de progression)
 function formatTime(time) {
