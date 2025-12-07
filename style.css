@@ -299,18 +299,17 @@ h1, h2 {
     color: #ffcccc;
 }
 
-
-/* 4. FOOTER GLOBAL PLAYER (Toutes Corrections Appliquées) */
+/* 4. FOOTER GLOBAL PLAYER (Corrections de débordement et de centrage) */
 #global-player-footer {
     position: fixed;
     bottom: 0;
     left: 0;
     width: 100%;
-    background-color: #333; /* Fond sombre pour contraste */
+    background-color: #333; 
     color: white;
     padding: 10px 20px;
     display: flex;
-    justify-content: space-between; /* Espace entre les 3 zones */
+    justify-content: space-between; 
     align-items: center;
     box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.3);
     z-index: 1000;
@@ -321,11 +320,11 @@ h1, h2 {
 #current-info-footer {
     display: flex;
     align-items: center;
-    width: 25%; /* Prend un quart de l'espace à gauche */
-    min-width: 200px;
+    flex: 1 1 200px; /* Flexible mais prend au moins 200px */
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    padding-right: 10px; 
 }
 
 /* Zone de lecture centrale (boutons, barre) - Centrage garanti */
@@ -333,7 +332,7 @@ h1, h2 {
     display: flex;
     flex-direction: column;
     align-items: center;
-    flex-grow: 1; /* Prend l'espace restant pour centrer au milieu */
+    flex: 2 1 350px; /* Zone principale qui prend l'espace central */
     max-width: 600px; 
     padding: 0 10px;
 }
@@ -355,7 +354,6 @@ h1, h2 {
 #playback-bar #progress-bar {
     flex-grow: 1;
     height: 6px;
-    /* Style de la barre de progression */
     -webkit-appearance: none;
     appearance: none;
     background: #555;
@@ -380,17 +378,17 @@ h1, h2 {
 #right-controls-area {
     display: flex;
     align-items: center;
-    gap: 20px; 
-    padding-right: 10px; 
-    justify-content: flex-end; /* Pousse les éléments vers la droite */
-    width: 25%;
-    min-width: 200px;
+    gap: 15px; 
+    flex: 0 0 auto; /* IMPORTANT : Empêche cette zone de se réduire pour éviter le débordement */
+    padding-right: 0px; 
+    justify-content: flex-end; 
+    min-width: 200px; 
 }
 
 #player-settings {
     display: flex;
     align-items: center;
-    gap: 15px;
+    gap: 10px; 
     font-size: 14px;
 }
 
@@ -411,11 +409,9 @@ h1, h2 {
     text-align: right;
 }
 
-/* Correction de la position de la poubelle (bien à l'intérieur de l'écran) */
 #delete-track-button {
     font-size: 20px; 
     color: #cc3333;
-    /* Margin pour assurer qu'elle est loin du bord */
     margin-right: 5px; 
 }
 
@@ -451,27 +447,38 @@ h1, h2 {
         width: 100%;
         margin-bottom: 10px;
         order: 1;
+        padding-right: 0;
     }
     
     #center-playback-area {
         width: 100%;
         max-width: none;
-        order: 3; /* Placer en bas de la ligne */
+        order: 3; 
+        margin-top: 10px; 
+        padding: 0;
     }
 
     #right-controls-area {
         width: 100%;
-        justify-content: space-between;
-        order: 2; /* Placer sous les infos du morceau */
-        margin-bottom: 10px;
+        flex-grow: 1; 
+        justify-content: space-between; /* Distribue les éléments sur la ligne */
+        order: 2; 
+        margin-bottom: 5px;
+        min-width: 100px;
     }
 
     #player-settings {
-        /* Permet à la poubelle de rester à droite */
         order: 1; 
+        width: auto; 
     }
     
     #delete-track-button {
-        order: 2; /* Pousse la poubelle à droite de la section settings */
+        order: 2; 
+        margin-left: 15px; 
+    }
+    
+    /* Les contrôles de volume et de vitesse doivent être plus petits */
+    #volume-bar, #speed-bar {
+        width: 60px;
     }
 }
