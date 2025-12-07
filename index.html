@@ -6,8 +6,8 @@
     <title>SXTN - Music Player (Compact)</title>
     <link rel="stylesheet" href="style.css">
     
-    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
+    import { initializeApp } from "firebase/app";
+    import { getAnalytics } from "firebase/analytics";
     
     <script>
         // Remplacez le contenu de ce script par le code de l'étape 2 de votre console Firebase
@@ -25,8 +25,8 @@
         };
 
         // Initialisation de Firebase
-        firebase.initializeApp(firebaseConfig);
-        const auth = firebase.auth();
+        const app = initializeApp(firebaseConfig);
+        const analytics = getAnalytics(app);
         // Fin de l'exemple - Assurez-vous d'avoir les lignes initializeApp et const auth
         
         // Nous n'utilisons PAS les imports ni getAnalytics si vous avez choisi l'option <script>
@@ -213,4 +213,5 @@
     <script src="script.js"></script>
 </body>
 </html>
+
 
