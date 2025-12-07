@@ -1,11 +1,14 @@
-// Variable globale pour stocker la playlist actuelle et l'utilisateur
+// Variable globale pour stocker la playlist actuelle et l'état
 let currentPlaylist = [];
 let currentIndex = -1;
 let isPlaying = false;
-let currentUser = null; 
+let isAdmin = false; // Nouvelle variable pour le mode Admin
+
+// Code secret pour l'accès Admin
+const ADMIN_CODE = "080216";
 
 // =========================================================
-// GESTION IndexedDB (Base de données locale pour les Morceaux)
+// GESTION IndexedDB (Base de données locale pour les Morceaux - Global)
 // =========================================================
 
 const DB_NAME = 'SXTNDatabase';
@@ -28,10 +31,8 @@ function openDB() {
         request.onupgradeneeded = (event) => {
             const db = event.target.result;
             if (!db.objectStoreNames.contains(STORE_NAME)) {
-                // Création du store avec 'id' comme clé auto-incrémentée
-                const objectStore = db.createObjectStore(STORE_NAME, { keyPath: 'id', autoIncrement: true });
-                // Ajout d'un index pour filtrer les morceaux par utilisateur
-                objectStore.createIndex("user", "user", { unique: false });
+                // Création du store sans index "user" car les morceaux sont globaux
+                db.createObjectStore(STORE_NAME, { keyPath: 'id', autoIncrement: true });
             }
         };
     });
@@ -43,6 +44,8 @@ async function addTrackToDB(trackData) {
         const transaction = db.transaction([STORE_NAME], 'readwrite');
         const store = transaction.objectStore(STORE_NAME);
 
+        // Pas besoin du champ 'user' dans trackData ici
+        
         const request = store.add(trackData);
         
         request.onsuccess = () => resolve(request.result);
@@ -82,73 +85,43 @@ async function deleteTrackFromDB(trackId) {
 }
 
 // =========================================================
-// AUTHENTIFICATION FIREBASE (Centralisée, pour la connexion)
+// GESTION MODE ADMIN
 // =========================================================
 
-function showRegister() {
-    document.getElementById('login-form').style.display = 'none';
-    document.getElementById('register-form').style.display = 'block';
-}
-
-function showLogin() {
-    document.getElementById('register-form').style.display = 'none';
-    document.getElementById('login-form').style.display = 'block';
-}
-
-async function registerUser() {
-    // Firebase requiert un format email, nous le simulons pour le Nom d'utilisateur
-    const username = document.getElementById('register-username').value.trim();
-    // Nous ajoutons un suffixe pour respecter le format email requis par Firebase Auth
-    const email = username + "@sxtn.com"; 
-    const password = document.getElementById('register-password').value;
-
-    if (username === "" || password.length < 6) {
-        alert("Le nom d'utilisateur est requis et le mot de passe doit contenir au moins 6 caractères.");
+function showAdminPrompt() {
+    // Vérifie si nous sommes déjà en mode Admin
+    if (isAdmin) {
+        alert("Mode Administrateur déjà activé.");
         return;
     }
+    
+    // Utilisation d'une boîte de dialogue simple pour le code
+    const code = prompt("Entrez le code Admin pour accéder à l'importation de morceaux :");
 
-    try {
-        const userCredential = await auth.createUserWithEmailAndPassword(email, password);
-        alert(`Compte ${username} créé avec succès ! Vous êtes connecté.`);
-        currentUser = username;
-        // La session est gérée par Firebase, mais nous mettons à jour le front-end
-        
-        document.getElementById('auth-container').style.display = 'none';
-        document.getElementById('app-container').style.display = 'flex';
-        await loadPlaylist(); 
-    } catch (error) {
-        console.error("Erreur d'enregistrement Firebase:", error);
-        alert(`Erreur lors de la création du compte : ${error.message}`);
+    if (code === ADMIN_CODE) {
+        isAdmin = true;
+        document.getElementById('admin-access-btn').textContent = "ADMIN (Activé)";
+        alert("Mode Administrateur activé ! Vous pouvez maintenant utiliser le menu ☰ pour importer des morceaux.");
+    } else if (code !== null) {
+        alert("Code incorrect.");
     }
 }
 
-async function loginUser() {
-    const username = document.getElementById('login-username').value.trim();
-    const email = username + "@sxtn.com"; 
-    const password = document.getElementById('login-password').value;
-
-    if (username === "" || !password) {
-        alert("Veuillez remplir tous les champs.");
+function toggleSideMenu() {
+    const menu = document.getElementById('side-menu');
+    
+    // Si on n'est PAS Admin, on n'ouvre pas le menu d'importation
+    if (!isAdmin && !menu.classList.contains('open')) {
+        alert("Vous devez activer le mode Administrateur (ADMIN ACCESS) pour importer des morceaux.");
         return;
     }
-
-    try {
-        await auth.signInWithEmailAndPassword(email, password);
-        // Firebase gère l'état de connexion. loadPlaylist sera appelée via onAuthStateChanged
-    } catch (error) {
-        console.error("Erreur de connexion Firebase:", error);
-        alert("Identifiants incorrects ou utilisateur non trouvé. Vérifiez le nom d'utilisateur et le Mot de passe.");
-    }
+    
+    menu.classList.toggle('open');
 }
 
 // =========================================================
 // GESTION LECTEUR ET PLAYLIST
 // =========================================================
-
-function toggleSideMenu() {
-    const menu = document.getElementById('side-menu');
-    menu.classList.toggle('open');
-}
 
 // Fonction utilitaire pour lire un fichier en Base64
 function readFileAsDataURL(file) {
@@ -171,12 +144,11 @@ function getCurrentPlayer() {
 
 
 async function addTrack() {
-    // Vérification de l'utilisateur connecté
-    if (!currentUser) {
-        alert("Veuillez vous connecter avant d'ajouter un morceau.");
+    if (!isAdmin) {
+        alert("Seul l'Administrateur peut ajouter des morceaux.");
         return;
     }
-    
+
     const title = document.getElementById('music-title').value || "Titre Inconnu";
     const artist = document.getElementById('music-description').value || "Artiste Inconnu";
     const album = document.getElementById('music-artist').value || "Album Inconnu";
@@ -239,7 +211,7 @@ async function addTrack() {
         cover: coverBase64,
         mainAudio: mainAudioBase64,
         stems: hasStems ? stemData : null,
-        user: currentUser // Assurez-vous que l'utilisateur est défini
+        // Plus de champ 'user' nécessaire
     };
 
     try {
@@ -254,38 +226,54 @@ async function addTrack() {
 }
 
 async function loadPlaylist() {
-    // 1. Gérer l'état de l'authentification Firebase
-    // Cette fonction s'exécute quand l'état d'auth change (connexion/déconnexion)
-    auth.onAuthStateChanged(async (user) => {
-        if (user) {
-            // Utilisateur connecté via Firebase
-            // L'email est au format "username@sxtn.com"
-            currentUser = user.email.split('@')[0]; 
+    // Tous les morceaux sont chargés, peu importe qui les a ajoutés.
+    const allTracks = await readAllTracksFromDB(); 
+    currentPlaylist = allTracks; 
 
-            document.getElementById('auth-container').style.display = 'none';
-            document.getElementById('app-container').style.display = 'flex';
-
-            // 2. Charger les morceaux spécifiques à cet utilisateur depuis IndexedDB
-            const allTracks = await readAllTracksFromDB(); 
-            // Nous filtrons les morceaux stockés localement par l'utilisateur connecté
-            const userTracks = allTracks.filter(track => track.user === currentUser);
-            currentPlaylist = userTracks; 
-
-            displayAlbums();
-            displayTracklist(null); 
-            
-        } else {
-            // Utilisateur déconnecté ou non trouvé
-            currentUser = null;
-            currentPlaylist = [];
-            document.getElementById('auth-container').style.display = 'block';
-            document.getElementById('app-container').style.display = 'none';
+    // Affiche un message si la bibliothèque est vide.
+    const libraryMain = document.getElementById('library-main');
+    if (currentPlaylist.length === 0) {
+        libraryMain.innerHTML = `
+            <h2>LIBRARY</h2>
+            <div id="empty-library-message" style="padding: 20px; background: #eee; border-radius: 8px; text-align: center;">
+                Votre bibliothèque est vide. ${isAdmin ? 'Importez des morceaux via le menu ☰.' : 'L\'Administrateur doit importer des morceaux.'}
+            </div>
+            <div id="album-carousel"></div>
+            <div id="tracklist-container"><ul id="tracklist-ul"></ul></div>
+        `;
+    } else {
+        // Pour s'assurer que les conteneurs sont présents si on recharge
+        if (!document.getElementById('album-carousel')) {
+             libraryMain.innerHTML = `
+                <h2>LIBRARY</h2>
+                <div id="album-carousel"></div>
+                <div id="tracklist-container"><ul id="tracklist-ul"></ul></div>
+            `;
         }
-    });
+        displayAlbums();
+        displayTracklist(null);
+    }
+    
+    // Mise à jour de l'affichage en mode Admin/Lecture seule
+    updateAdminUI(); 
+}
+
+function updateAdminUI() {
+    // Seul l'Admin peut supprimer des morceaux
+    document.getElementById('delete-track-button').style.display = isAdmin ? 'block' : 'none';
+    
+    // Le message de la bibliothèque peut aussi changer si elle est vide
+    const emptyMessage = document.getElementById('empty-library-message');
+    if (emptyMessage) {
+        emptyMessage.textContent = isAdmin 
+            ? 'Votre bibliothèque est vide. Importez des morceaux via le menu ☰.' 
+            : 'Votre bibliothèque est vide. L\'Administrateur doit importer des morceaux.';
+    }
 }
 
 function displayAlbums() {
     const carousel = document.getElementById('album-carousel');
+    if (!carousel) return; 
     carousel.innerHTML = '';
     
     // Regrouper les morceaux par album
@@ -322,6 +310,7 @@ let activeAlbum = null;
 
 function displayTracklist(albumName) {
     const tracklistUl = document.getElementById('tracklist-ul');
+    if (!tracklistUl) return;
     tracklistUl.innerHTML = '';
     
     // Mettre à jour la carte active
@@ -357,7 +346,7 @@ function displayTracklist(albumName) {
                     <span style="font-size: 0.8em; color: #777;">${playText}</span>
                 </div>
                 <div class="track-controls">
-                     <button onclick="event.stopPropagation(); deleteTrack(${track.id})" class="track-delete-button">🗑️</button>
+                     ${isAdmin ? `<button onclick="event.stopPropagation(); deleteTrack(${track.id})" class="track-delete-button">🗑️</button>` : ''}
                 </div>
             `;
             tracklistUl.appendChild(li);
@@ -369,6 +358,11 @@ function displayTracklist(albumName) {
 }
 
 async function deleteTrack(trackId) {
+    if (!isAdmin) {
+        alert("Seul l'Administrateur peut supprimer des morceaux.");
+        return;
+    }
+    
     if (!confirm("Êtes-vous sûr de vouloir supprimer ce morceau ?")) {
         return;
     }
@@ -390,65 +384,41 @@ async function deleteTrack(trackId) {
     }
 }
 
+// ... (Les fonctions playTrack, stopPlayback, togglePlayPause, playNext, playPrevious, seekForward, seekBackward, setupStemButtons restent identiques, mais doivent être incluses dans le fichier script.js. Je ne les remets pas ici par souci de concision, mais assurez-vous de garder la version complète.)
 
 function playTrack(index) {
-    if (index === currentIndex && isPlaying) {
-        togglePlayPause(); // Pause si c'est déjà en cours
-        return;
-    }
-
+    // ... (Corps de la fonction playTrack) ...
     currentIndex = index;
     const track = currentPlaylist[currentIndex];
 
     if (!track) return;
 
-    // Arrêter tous les lecteurs (main et stems)
     stopPlayback();
 
-    // Configurer le player principal (audio-player)
     const audioPlayer = document.getElementById('audio-player');
     const playerToUse = track.stems ? document.getElementById('stem-vocals') : audioPlayer;
     const isStemMode = !!track.stems;
 
-    // Cacher ou afficher les contrôles Stems
     document.getElementById('stem-controls').style.display = isStemMode ? 'flex' : 'none';
-    document.getElementById('delete-track-button').style.display = 'block';
+    document.getElementById('delete-track-button').style.display = isAdmin ? 'block' : 'none'; // Affichage conditionnel
 
-    // Mise à jour de l'affichage du pied de page
     document.getElementById('current-cover-footer').src = track.cover;
     document.getElementById('current-title-footer').textContent = track.title;
     document.getElementById('current-artist-footer').textContent = `${track.artist} - Album: ${track.album}`;
 
-
     if (isStemMode) {
-        // Charger tous les stems
         document.getElementById('stem-vocals').src = track.stems.vocals;
         document.getElementById('stem-bass').src = track.stems.bass;
         document.getElementById('stem-drums').src = track.stems.drums;
         document.getElementById('stem-other').src = track.stems.other;
-        
-        // Afficher les boutons de contrôle des stems
         setupStemButtons();
-        
-        // Jouer après que le vocal stem est prêt
-        playerToUse.onloadeddata = () => {
-            playAllPlayers();
-        };
-
+        playerToUse.onloadeddata = playAllPlayers;
     } else {
-        // Charger l'audio principal
         audioPlayer.src = track.mainAudio;
-        
-        // Jouer après que l'audio principal est prêt
-        playerToUse.onloadeddata = () => {
-             playAllPlayers();
-        };
+        playerToUse.onloadeddata = playAllPlayers;
     }
     
-    // S'assurer que les événements de fin de piste sont attachés au player principal utilisé
     playerToUse.onended = playNext;
-
-    // Mettre à jour la tracklist pour mettre en évidence la piste active
     displayTracklist(track.album);
 }
 
@@ -466,14 +436,12 @@ function stopPlayback() {
 
 
 function togglePlayPause() {
-    // Vérification rapide pour éviter les erreurs si l'index n'est pas prêt
      if (currentIndex === -1 || currentPlaylist.length === 0) return;
      
     const track = currentPlaylist[currentIndex];
     const isStemMode = track && track.stems;
     const player = isStemMode ? document.getElementById('stem-vocals') : document.getElementById('audio-player');
     
-    // Si c'était déjà en pause, on lance. Si c'était déjà en cours, on pause.
     if (isPlaying) {
         player.pause();
         document.getElementById('play-pause-button').textContent = '▶️';
@@ -491,7 +459,6 @@ function togglePlayPause() {
         isPlaying = true;
         
         if (isStemMode) {
-            // Mettre en lecture synchrone
             document.getElementById('stem-bass').play();
             document.getElementById('stem-drums').play();
             document.getElementById('stem-other').play();
@@ -499,7 +466,6 @@ function togglePlayPause() {
     }
 }
 
-// Fonction appelée pour lancer tous les players (utilisée après le chargement des données)
 function playAllPlayers() {
     const track = currentPlaylist[currentIndex];
     const isStemMode = track && track.stems;
@@ -516,11 +482,11 @@ function playAllPlayers() {
     }
 }
 
+
 function playNext() {
     if (currentIndex < currentPlaylist.length - 1) {
         playTrack(currentIndex + 1);
     } else if (currentPlaylist.length > 0) {
-        // Revenir au début de la playlist
         playTrack(0);
     }
 }
@@ -529,7 +495,6 @@ function playPrevious() {
     if (currentIndex > 0) {
         playTrack(currentIndex - 1);
     } else if (currentPlaylist.length > 0) {
-        // Revenir à la fin de la playlist
         playTrack(currentPlaylist.length - 1);
     }
 }
@@ -544,7 +509,6 @@ function seekForward(seconds) {
     player.currentTime += seconds;
     
     if (isStemMode) {
-        // Synchroniser les autres stems
         document.getElementById('stem-bass').currentTime = player.currentTime;
         document.getElementById('stem-drums').currentTime = player.currentTime;
         document.getElementById('stem-other').currentTime = player.currentTime;
@@ -561,14 +525,13 @@ function seekBackward(seconds) {
     player.currentTime -= seconds;
 
     if (isStemMode) {
-        // Synchroniser les autres stems
         document.getElementById('stem-bass').currentTime = player.currentTime;
         document.getElementById('stem-drums').currentTime = player.currentTime;
         document.getElementById('stem-other').currentTime = player.currentTime;
     }
 }
 
-// Fonction de synchronisation du range input avec tous les players
+
 document.getElementById('progress-bar').addEventListener('input', () => {
     if (currentIndex === -1) return;
     
@@ -579,20 +542,17 @@ document.getElementById('progress-bar').addEventListener('input', () => {
         const mainPlayer = document.getElementById('audio-player');
         
         if (track.stems) {
-            // Si stem mode, la barre contrôle les stems
             document.getElementById('stem-vocals').currentTime = newTime;
             document.getElementById('stem-bass').currentTime = newTime;
             document.getElementById('stem-drums').currentTime = newTime;
             document.getElementById('stem-other').currentTime = newTime;
         } else {
-            // Sinon, elle contrôle le main player
             mainPlayer.currentTime = newTime;
         }
     }
 });
 
 
-// GESTION DES BOUTONS STEMS
 function setupStemButtons() {
     const stemContainer = document.getElementById('stem-container');
     stemContainer.innerHTML = '';
