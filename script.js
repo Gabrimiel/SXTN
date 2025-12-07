@@ -102,6 +102,7 @@ function showAdminPrompt() {
         isAdmin = true;
         document.getElementById('admin-access-btn').textContent = "ADMIN (Activé)";
         alert("Mode Administrateur activé ! Vous pouvez maintenant utiliser le menu ☰ pour importer des morceaux.");
+        updateAdminUI(); // Mettre à jour l'interface après l'activation
     } else if (code !== null) {
         alert("Code incorrect.");
     }
@@ -262,6 +263,9 @@ function updateAdminUI() {
     // Seul l'Admin peut supprimer des morceaux
     document.getElementById('delete-track-button').style.display = isAdmin ? 'block' : 'none';
     
+    // Mettre à jour le texte du bouton Admin
+    document.getElementById('admin-access-btn').textContent = isAdmin ? "ADMIN (Activé)" : "ADMIN ACCESS";
+
     // Le message de la bibliothèque peut aussi changer si elle est vide
     const emptyMessage = document.getElementById('empty-library-message');
     if (emptyMessage) {
@@ -384,10 +388,7 @@ async function deleteTrack(trackId) {
     }
 }
 
-// ... (Les fonctions playTrack, stopPlayback, togglePlayPause, playNext, playPrevious, seekForward, seekBackward, setupStemButtons restent identiques, mais doivent être incluses dans le fichier script.js. Je ne les remets pas ici par souci de concision, mais assurez-vous de garder la version complète.)
-
 function playTrack(index) {
-    // ... (Corps de la fonction playTrack) ...
     currentIndex = index;
     const track = currentPlaylist[currentIndex];
 
@@ -407,17 +408,22 @@ function playTrack(index) {
     document.getElementById('current-artist-footer').textContent = `${track.artist} - Album: ${track.album}`;
 
     if (isStemMode) {
+        // Définir la source pour tous les stems
         document.getElementById('stem-vocals').src = track.stems.vocals;
         document.getElementById('stem-bass').src = track.stems.bass;
         document.getElementById('stem-drums').src = track.stems.drums;
         document.getElementById('stem-other').src = track.stems.other;
         setupStemButtons();
-        playerToUse.onloadeddata = playAllPlayers;
     } else {
         audioPlayer.src = track.mainAudio;
-        playerToUse.onloadeddata = playAllPlayers;
     }
     
+    // NOUVEAU CODE DE SYNCHRONISATION : Utiliser onloadedmetadata sur le player principal
+    // pour garantir que le chargement est terminé avant de lancer la lecture synchronisée
+    playerToUse.onloadedmetadata = () => {
+        playAllPlayers();
+    };
+
     playerToUse.onended = playNext;
     displayTracklist(track.album);
 }
@@ -426,10 +432,13 @@ function stopPlayback() {
     isPlaying = false;
     document.getElementById('play-pause-button').textContent = '▶️';
     document.getElementById('audio-player').pause();
+    // Arrêter tous les stems
     document.getElementById('stem-vocals').pause();
     document.getElementById('stem-bass').pause();
     document.getElementById('stem-drums').pause();
     document.getElementById('stem-other').pause();
+    
+    // Réinitialiser le temps de lecture de tous les players
     document.querySelectorAll('.stem-player').forEach(player => player.currentTime = 0);
     document.getElementById('audio-player').currentTime = 0;
 }
@@ -458,6 +467,7 @@ function togglePlayPause() {
         document.getElementById('play-pause-button').textContent = '⏸️';
         isPlaying = true;
         
+        // Si c'est un stem, jouer les autres en synchronisation
         if (isStemMode) {
             document.getElementById('stem-bass').play();
             document.getElementById('stem-drums').play();
@@ -466,19 +476,36 @@ function togglePlayPause() {
     }
 }
 
+/**
+ * LANCE TOUS LES PLAYERS EN SYNCHRONISATION (CORRECTION DE BUG STEMS)
+ */
 function playAllPlayers() {
     const track = currentPlaylist[currentIndex];
     const isStemMode = track && track.stems;
     const player = isStemMode ? document.getElementById('stem-vocals') : document.getElementById('audio-player');
 
+    // 1. Démarrer la lecture du joueur principal (ou vocal)
     player.play();
     document.getElementById('play-pause-button').textContent = '⏸️';
     isPlaying = true;
 
+    // 2. Si nous sommes en mode Stem, synchroniser les autres pistes avant de les lancer
     if (isStemMode) {
-        document.getElementById('stem-bass').play();
-        document.getElementById('stem-drums').play();
-        document.getElementById('stem-other').play();
+        const otherStems = [
+            document.getElementById('stem-bass'),
+            document.getElementById('stem-drums'),
+            document.getElementById('stem-other')
+        ];
+        
+        const mainTime = player.currentTime;
+
+        otherStems.forEach(stemPlayer => {
+            // Synchronisation : mettre le temps de lecture égal au temps du player vocal
+            // Ceci garantit que toutes les pistes démarrent au même point temporel.
+            stemPlayer.currentTime = mainTime; 
+            // Démarrer la lecture
+            stemPlayer.play();
+        });
     }
 }
 
@@ -506,12 +533,15 @@ function seekForward(seconds) {
     const isStemMode = track && track.stems;
     const player = isStemMode ? document.getElementById('stem-vocals') : document.getElementById('audio-player');
     
+    // Avancer le joueur principal
     player.currentTime += seconds;
     
+    // Synchroniser les autres stems immédiatement
     if (isStemMode) {
-        document.getElementById('stem-bass').currentTime = player.currentTime;
-        document.getElementById('stem-drums').currentTime = player.currentTime;
-        document.getElementById('stem-other').currentTime = player.currentTime;
+        const newTime = player.currentTime;
+        document.getElementById('stem-bass').currentTime = newTime;
+        document.getElementById('stem-drums').currentTime = newTime;
+        document.getElementById('stem-other').currentTime = newTime;
     }
 }
 
@@ -522,12 +552,15 @@ function seekBackward(seconds) {
     const isStemMode = track && track.stems;
     const player = isStemMode ? document.getElementById('stem-vocals') : document.getElementById('audio-player');
 
+    // Reculer le joueur principal
     player.currentTime -= seconds;
 
+    // Synchroniser les autres stems immédiatement
     if (isStemMode) {
-        document.getElementById('stem-bass').currentTime = player.currentTime;
-        document.getElementById('stem-drums').currentTime = player.currentTime;
-        document.getElementById('stem-other').currentTime = player.currentTime;
+        const newTime = player.currentTime;
+        document.getElementById('stem-bass').currentTime = newTime;
+        document.getElementById('stem-drums').currentTime = newTime;
+        document.getElementById('stem-other').currentTime = newTime;
     }
 }
 
@@ -542,6 +575,7 @@ document.getElementById('progress-bar').addEventListener('input', () => {
         const mainPlayer = document.getElementById('audio-player');
         
         if (track.stems) {
+            // Mettre à jour le temps de lecture de tous les players
             document.getElementById('stem-vocals').currentTime = newTime;
             document.getElementById('stem-bass').currentTime = newTime;
             document.getElementById('stem-drums').currentTime = newTime;
@@ -569,6 +603,9 @@ function setupStemButtons() {
         button.textContent = stemNames[stemId];
         button.className = 'stem-mute-button active-stem';
         button.setAttribute('data-stem-id', stemId);
+        
+        // S'assurer que les stems ne sont pas mutés par défaut
+        playerElement.muted = false;
 
         button.onclick = () => {
             if (playerElement.muted) {
