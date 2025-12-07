@@ -17,7 +17,6 @@
     <div id="side-menu" class="side-menu">
         <button class="close-btn" onclick="toggleSideMenu()">✖️</button>
         <h2>ADMIN : Importer Morceau</h2>
-        <p>Entrez les chemins d'accès URL (ex: audio/stems/Nom_du_morceau)</p>
         
         <label for="music-title">Titre du Morceau :</label>
         <input type="text" id="music-title" placeholder="Nom du titre" required>
@@ -28,8 +27,8 @@
         <label for="music-artist">Album :</label>
         <input type="text" id="music-artist" placeholder="Nom de l'album" required>
 
-        <label for="cover-path">Chemin de l'image de couverture (URL) :</label>
-        <input type="text" id="cover-path" placeholder="ex: assets/covers/album_art.jpg">
+        <label for="cover-file">Image de couverture :</label>
+        <input type="file" id="cover-file" accept="image/*">
 
         <hr>
 
@@ -38,14 +37,22 @@
         </label>
         
         <div id="simple-audio-fields">
-            <label for="audio-path">Chemin du fichier audio principal (URL) :</label>
-            <input type="text" id="audio-path" placeholder="ex: audio/morceau.mp3">
+            <label for="audio-file">Fichier audio principal (.mp3) :</label>
+            <input type="file" id="audio-file" accept=".mp3">
         </div>
 
         <div id="stem-fields" style="display: none;">
-            <label for="stem-base-path">Chemin de base des Stems (sans suffixe) :</label>
-            <input type="text" id="stem-base-path" placeholder="ex: audio/stems/Mon_Titre">
-            <p style="font-size: 0.8em; color: #aaa; margin-top: 5px;">Le script ajoutera automatiquement **_Vocals.mp3**, **_Bass.mp3**, etc.</p>
+            <label for="stem-vocals-file">Voix (.mp3) :</label>
+            <input type="file" id="stem-vocals-file" accept=".mp3">
+            
+            <label for="stem-bass-file">Basse (.mp3) :</label>
+            <input type="file" id="stem-bass-file" accept=".mp3">
+            
+            <label for="stem-drums-file">Batterie (.mp3) :</label>
+            <input type="file" id="stem-drums-file" accept=".mp3">
+            
+            <label for="stem-other-file">Musique/Autres (.mp3) :</label>
+            <input type="file" id="stem-other-file" accept=".mp3">
         </div>
 
         <button onclick="addTrack()" class="add-track-btn">Ajouter à la Bibliothèque</button>
