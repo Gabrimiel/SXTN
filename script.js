@@ -561,43 +561,77 @@ function playPrevious() {
 
 // CORRECTION IMPORTANTE DE LA FONCTION SEEK (AVANCE RAPIDE)
 function seekForward(seconds) {
-    if (currentIndex === -1) return;
+    // Si ce n'est pas en lecture ou pas de morceau, on sort
+    if (currentIndex === -1 || !isPlaying) return; 
     
     const track = currentPlaylist[currentIndex];
     const isStemMode = track && track.stems;
     const player = isStemMode ? document.getElementById('stem-vocals') : document.getElementById('audio-player');
     
-    // 1. Avancer le joueur principal (Vocal ou Main)
-    player.currentTime += seconds;
-    
-    // 2. Synchroniser les autres stems immédiatement si en mode Stem
+    // 1. Définir le nouveau temps cible
+    const newTimeTarget = player.currentTime + seconds;
+
+    // 2. Si mode Stem, on force l'opération Pause-Sync-Play
     if (isStemMode) {
-        const newTime = player.currentTime;
-        // On s'assure que les autres Stems se calent exactement sur le nouveau temps du Vocal
-        document.getElementById('stem-bass').currentTime = newTime;
-        document.getElementById('stem-drums').currentTime = newTime;
-        document.getElementById('stem-other').currentTime = newTime;
+        // Pause forcée pour donner le temps au navigateur de se recaler
+        player.pause();
+        document.getElementById('stem-bass').pause();
+        document.getElementById('stem-drums').pause();
+        document.getElementById('stem-other').pause();
+
+        // Application du nouveau temps sur tous les Stems
+        document.getElementById('stem-vocals').currentTime = newTimeTarget;
+        document.getElementById('stem-bass').currentTime = newTimeTarget;
+        document.getElementById('stem-drums').currentTime = newTimeTarget;
+        document.getElementById('stem-other').currentTime = newTimeTarget;
+
+        // Reprise immédiate (la boucle de sync anti-dérive prendra le relai)
+        document.getElementById('stem-vocals').play();
+        document.getElementById('stem-bass').play();
+        document.getElementById('stem-drums').play();
+        document.getElementById('stem-other').play();
+
+    } else {
+        // Si audio simple, on avance simplement
+        player.currentTime = newTimeTarget;
     }
 }
 
 // CORRECTION IMPORTANTE DE LA FONCTION SEEK (RETOUR RAPIDE)
 function seekBackward(seconds) {
-    if (currentIndex === -1) return;
+    // Si ce n'est pas en lecture ou pas de morceau, on sort
+    if (currentIndex === -1 || !isPlaying) return; 
 
     const track = currentPlaylist[currentIndex];
     const isStemMode = track && track.stems;
     const player = isStemMode ? document.getElementById('stem-vocals') : document.getElementById('audio-player');
 
-    // 1. Reculer le joueur principal (Vocal ou Main)
-    player.currentTime -= seconds;
+    // 1. Définir le nouveau temps cible
+    const newTimeTarget = player.currentTime - seconds;
 
-    // 2. Synchroniser les autres stems immédiatement si en mode Stem
+    // 2. Si mode Stem, on force l'opération Pause-Sync-Play
     if (isStemMode) {
-        const newTime = player.currentTime;
-        // On s'assure que les autres Stems se calent exactement sur le nouveau temps du Vocal
-        document.getElementById('stem-bass').currentTime = newTime;
-        document.getElementById('stem-drums').currentTime = newTime;
-        document.getElementById('stem-other').currentTime = newTime;
+        // Pause forcée
+        player.pause();
+        document.getElementById('stem-bass').pause();
+        document.getElementById('stem-drums').pause();
+        document.getElementById('stem-other').pause();
+
+        // Application du nouveau temps sur tous les Stems
+        document.getElementById('stem-vocals').currentTime = newTimeTarget;
+        document.getElementById('stem-bass').currentTime = newTimeTarget;
+        document.getElementById('stem-drums').currentTime = newTimeTarget;
+        document.getElementById('stem-other').currentTime = newTimeTarget;
+
+        // Reprise immédiate
+        document.getElementById('stem-vocals').play();
+        document.getElementById('stem-bass').play();
+        document.getElementById('stem-drums').play();
+        document.getElementById('stem-other').play();
+
+    } else {
+        // Si audio simple, on recule simplement
+        player.currentTime = newTimeTarget;
     }
 }
 
@@ -610,14 +644,30 @@ document.getElementById('progress-bar').addEventListener('input', () => {
     const track = currentPlaylist[currentIndex];
 
     if (track) {
+        const isStemMode = track.stems;
         const mainPlayer = document.getElementById('audio-player');
         
-        if (track.stems) {
-            // Mettre à jour le temps de lecture de TOUS les players Stems
+        if (isStemMode) {
+            // 1. PAUSE (Même si ce n'est pas en cours de lecture, on s'assure qu'ils sont arrêtés)
+            document.getElementById('stem-vocals').pause();
+            document.getElementById('stem-bass').pause();
+            document.getElementById('stem-drums').pause();
+            document.getElementById('stem-other').pause();
+
+            // 2. SYNCHRONISATION
             document.getElementById('stem-vocals').currentTime = newTime;
             document.getElementById('stem-bass').currentTime = newTime;
             document.getElementById('stem-drums').currentTime = newTime;
             document.getElementById('stem-other').currentTime = newTime;
+
+            // 3. REPRISE (uniquement si c'était en cours de lecture au moment du seek)
+            if (isPlaying) {
+                document.getElementById('stem-vocals').play();
+                document.getElementById('stem-bass').play();
+                document.getElementById('stem-drums').play();
+                document.getElementById('stem-other').play();
+            }
+
         } else {
             // Sinon, mettre à jour le player principal
             mainPlayer.currentTime = newTime;
