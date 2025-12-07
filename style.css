@@ -7,7 +7,6 @@
     --secondary-color: #555;
     --card-bg: #e0d9cd; /* Fond carte album */
     --hover-bg: #d4cfc1;
-    --track-item-bg: #fff;
 }
 
 body {
@@ -71,14 +70,16 @@ h1, h2 {
 }
 
 #logo-icon {
+    /* Cet élément conteneur n'a plus besoin d'une grande taille de police */
     margin-right: 20px;
-    height: 30px; 
+    height: 30px; /* Hauteur du conteneur pour l'alignement */
     display: flex;
     align-items: center;
 }
 
+/* RÈGLE CLÉ pour limiter la taille du PNG */
 #site-logo {
-    height: 30px; 
+    height: 30px; /* Taille désirée pour qu'il soit petit */
     width: auto;
     object-fit: contain;
 }
@@ -93,20 +94,14 @@ h1, h2 {
     color: var(--text-color);
 }
 
-#admin-access-btn {
-    background: none;
-    border: 1px solid var(--secondary-color);
-    color: var(--secondary-color);
-    padding: 8px 15px;
-    border-radius: 50px;
+#connect-stem-btn {
+    background: transparent;
+    border: none;
+    color: var(--text-color);
+    font-weight: bold;
     cursor: pointer;
-    margin-left: 20px;
-    transition: background-color 0.2s, color 0.2s;
-}
-
-#admin-access-btn:hover {
-    background-color: var(--secondary-color);
-    color: white;
+    text-decoration: underline;
+    margin-right: 15px;
 }
 
 #menu-toggle {
@@ -115,126 +110,122 @@ h1, h2 {
     font-size: 24px;
     cursor: pointer;
     color: var(--text-color);
-    margin-left: 20px;
 }
 
 /* 2. MENU LATÉRAL (Side Menu) */
 #side-menu {
     position: fixed;
     top: 0;
-    right: -350px; /* Masqué par défaut */
+    right: 0;
     width: 300px;
     height: 100%;
-    background-color: var(--card-bg);
+    background-color: var(--bg-color);
     box-shadow: -4px 0 15px rgba(0, 0, 0, 0.2);
-    transition: right 0.3s ease-in-out;
+    transform: translateX(100%);
+    transition: transform 0.3s ease-in-out;
+    z-index: 1000;
     padding: 20px;
-    z-index: 1001;
     overflow-y: auto;
-    box-sizing: border-box;
 }
 
 #side-menu.open {
-    right: 0; /* Affiché */
+    transform: translateX(0);
 }
 
 #close-menu-btn {
-    background: none;
+    background: var(--secondary-color);
+    color: white;
+    padding: 8px;
     border: none;
-    font-size: 20px;
-    cursor: pointer;
-    float: right;
+    border-radius: 4px;
     margin-bottom: 20px;
+    cursor: pointer;
 }
 
-#side-menu h2 {
+.import-section h2 {
     text-align: left;
-    margin-top: 0;
     margin-bottom: 15px;
     letter-spacing: normal;
 }
-
-#side-menu input[type="text"], #side-menu input[type="file"] {
-    display: block;
+.import-section input[type="text"], .import-section input[type="file"] {
     width: 100%;
     padding: 8px;
-    margin-bottom: 10px;
+    margin: 5px 0 10px 0;
     border: 1px solid var(--secondary-color);
     border-radius: 4px;
+    background: #fff;
+    color: var(--text-color);
     box-sizing: border-box;
 }
-
-#side-menu button {
+.import-section button {
     background-color: var(--primary-color);
     color: white;
     padding: 10px;
     border: none;
-    border-radius: 4px;
+    border-radius: 50px;
     cursor: pointer;
+    margin-top: 20px;
     width: 100%;
-    margin-top: 15px;
 }
 
-/* 3. CONTENU PRINCIPAL (Library) */
+/* 3. CONTENU CENTRAL (Library) */
 #library-main {
+    padding: 30px 0;
     flex-grow: 1;
-    padding-top: 20px;
 }
 
+/* CAROUSEL DES ALBUMS */
 #album-carousel {
     display: flex;
-    overflow-x: auto;
+    overflow-x: auto; /* Permet de défiler horizontalement */
     gap: 20px;
     padding: 10px 0;
-    margin-bottom: 30px;
+    margin-bottom: 40px;
+    justify-content: center; /* Centrer les albums si l'écran est large */
 }
 
 .album-card {
-    flex: 0 0 auto; /* Empêche les cartes de se compresser */
-    width: 150px;
+    min-width: 150px;
+    max-width: 150px;
     text-align: center;
     cursor: pointer;
-    padding: 10px;
-    border-radius: 8px;
-    background-color: var(--card-bg);
-    transition: transform 0.2s, box-shadow 0.2s;
+    transition: transform 0.2s;
 }
 
 .album-card:hover {
     transform: translateY(-5px);
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-}
-
-.album-card.active-card {
-    border: 3px solid var(--primary-color);
-    box-shadow: 0 0 10px rgba(29, 185, 84, 0.5);
 }
 
 .album-cover-img {
     width: 100%;
     height: 150px;
+    border-radius: 50%; /* Style Vinyle/Rond */
     object-fit: cover;
-    border-radius: 4px;
-    margin-bottom: 5px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+    transition: all 0.2s;
 }
 
-.album-card-title {
-    font-weight: bold;
-    font-size: 1.1em;
-    color: var(--text-color);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+.album-card.active-card .album-cover-img {
+    box-shadow: 0 0 0 4px var(--primary-color); /* Bordure verte si actif */
 }
 
-.album-card-artist {
+.album-card-title, .album-card-artist {
+    margin-top: 8px;
     font-size: 0.9em;
     color: var(--secondary-color);
 }
+.album-card-title {
+    font-weight: bold;
+    color: var(--text-color);
+}
 
-/* Liste des Morceaux (Tracklist) */
+
+/* TRACKLIST */
 #tracklist-container {
-    padding: 0 10px;
+    background: var(--card-bg);
+    border-radius: 8px;
+    padding: 20px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
 }
 
 #tracklist-ul {
@@ -242,246 +233,217 @@ h1, h2 {
     padding: 0;
 }
 
+/* TRACKLIST ITEM */
 .track-item {
+    padding: 10px 15px; /* Augmenter le padding */
+    border-bottom: 1px solid var(--hover-bg);
+    cursor: pointer;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 10px 15px;
-    margin-bottom: 5px;
-    background-color: var(--track-item-bg);
-    border-radius: 4px;
-    cursor: pointer;
-    transition: background-color 0.2s;
 }
 
 .track-item:hover {
     background-color: var(--hover-bg);
 }
 
-.track-item.active-track {
-    background-color: var(--primary-color);
-    color: white;
-}
-
-.track-item.active-track .track-item-title,
-.track-item.active-track .track-item-artist {
-    color: white;
-}
-
 .track-item-info {
     display: flex;
     align-items: center;
+    gap: 10px; /* Espace entre la pochette et le titre */
     flex-grow: 1;
 }
 
 .track-item-cover {
     width: 30px;
     height: 30px;
+    border-radius: 2px;
     object-fit: cover;
-    border-radius: 3px;
-    margin-right: 10px;
+}
+
+.track-item-title {
+    color: var(--text-color);
 }
 
 .track-controls {
     display: flex;
+    align-items: center;
     gap: 10px;
+}
+
+.track-play-button {
+    background: none;
+    border: none;
+    color: var(--primary-color);
+    font-size: 1em;
+    cursor: pointer;
+    padding: 5px;
+    font-weight: bold;
+    transition: opacity 0.2s;
+}
+.track-play-button:hover {
+    opacity: 0.7;
 }
 
 .track-delete-button {
     background: none;
     border: none;
     color: #cc3333;
+    font-size: 1.1em;
     cursor: pointer;
-    font-size: 16px;
-    transition: transform 0.1s;
-}
-.track-item.active-track .track-delete-button {
-    color: #ffcccc;
+    padding: 5px;
+    margin-left: 5px;
 }
 
-/* 4. FOOTER GLOBAL PLAYER (Finalisé pour l'Alignement) */
+.track-item.active-track {
+    background-color: var(--hover-bg); 
+}
+.track-item.active-track .track-item-title {
+    color: var(--primary-color);
+    font-weight: bold;
+}
+
+
+/* 4. FOOTER / LECTEUR GLOBAL */
 #global-player-footer {
     position: fixed;
     bottom: 0;
     left: 0;
     width: 100%;
-    background-color: #333; 
-    color: white;
+    background-color: var(--card-bg);
+    color: var(--text-color);
     padding: 10px 20px;
     display: flex;
-    justify-content: space-between; 
+    justify-content: space-between;
     align-items: center;
-    box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.3);
-    z-index: 1000;
-    box-sizing: border-box;
+    box-shadow: 0 -4px 15px rgba(0, 0, 0, 0.1);
+    z-index: 999;
 }
 
-/* Zone d'information courante (gauche) */
 #current-info-footer {
-    display: flex;
+    min-width: 180px;
+    display: flex; 
     align-items: center;
-    flex: 1 1 200px; 
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    padding-right: 10px; 
 }
 
-/* Zone de lecture centrale (boutons, barre) - Centrage garanti */
 #center-playback-area {
+    flex-grow: 1; 
+    max-width: 700px;
     display: flex;
     flex-direction: column;
     align-items: center;
-    /* On utilise max-width pour centrer le bloc, mais flex-grow pour qu'il prenne de la place */
-    flex-grow: 1; 
-    max-width: 600px; 
-    padding: 0 10px;
-    margin: 0 auto; /* Ajout de la marge auto pour le centrage si le flex-grow ne suffit pas */
+    justify-content: center;
+    margin: 0 20px;
 }
 
-/* Contrôles de lecture (Précédent, Pause/Play, Suivant...) */
 #footer-controls {
     display: flex;
-    gap: 15px;
-    margin-bottom: 5px;
+    justify-content: center; 
+    margin-bottom: 5px; 
 }
 
 #playback-bar {
     display: flex;
     align-items: center;
     width: 100%; 
-    gap: 10px;
 }
 
-#playback-bar #progress-bar {
+#progress-bar {
     flex-grow: 1;
-    height: 6px;
+    height: 5px;
+    margin: 0 10px;
     -webkit-appearance: none;
     appearance: none;
-    background: #555;
+    background: var(--hover-bg);
     border-radius: 5px;
+    cursor: pointer;
 }
 
-#playback-bar #progress-bar::-webkit-slider-thumb {
+#progress-bar::-webkit-slider-thumb {
     -webkit-appearance: none;
     appearance: none;
     width: 12px;
     height: 12px;
     border-radius: 50%;
     background: var(--primary-color);
+}
+
+#duration, #current-time {
+    font-size: 0.8em;
+    color: var(--secondary-color);
+}
+
+#footer-controls button {
+    background: none;
+    border: none;
+    color: var(--text-color);
+    font-size: 20px;
+    padding: 5px 10px;
     cursor: pointer;
+    transition: color 0.2s;
+}
+#footer-controls button:hover {
+    color: var(--primary-color);
 }
 
-#current-time, #duration {
-    font-size: 0.9em;
-}
-
-/* --- Contrôles Droits (Volume, Vitesse, Stems, Poubelle) --- */
+/* STEMS et POUBELLE */
 #right-controls-area {
+    min-width: 180px; 
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+}
+#stem-controls {
     display: flex;
     align-items: center;
-    gap: 15px; 
-    flex: 0 0 auto; 
-    padding-right: 0px; 
-    justify-content: flex-end; 
-    min-width: 200px; 
+    margin-left: 0;
 }
 
-#player-settings {
-    display: flex;
-    align-items: center;
-    gap: 10px; 
-    font-size: 14px;
-}
-
-#volume-control, #speed-control {
-    display: flex;
-    align-items: center;
-    gap: 5px;
-}
-
-#volume-bar, #speed-bar {
-    width: 80px;
-    height: 4px;
+.stem-mute-button {
+    padding: 5px 10px;
+    font-size: 0.8em;
+    background-color: var(--secondary-color);
+    color: white;
+    border: none;
+    border-radius: 50px;
     cursor: pointer;
 }
 
-#speed-display {
-    width: 30px; 
-    text-align: right;
-}
-
-#delete-track-button {
-    font-size: 20px; 
-    color: #cc3333;
-    margin-right: 5px; 
-}
-
-
-/* Stems Controls */
-#stem-container {
-    display: flex;
-    gap: 5px;
-}
-.stem-mute-button {
-    padding: 5px 8px !important;
-    font-size: 10px !important;
-    border: 1px solid white !important;
-    border-radius: 3px !important;
-    background: transparent !important;
-    opacity: 0.5;
-}
 .stem-mute-button.active-stem {
-    background-color: var(--primary-color) !important;
-    opacity: 1;
-    color: black !important;
-    border-color: var(--primary-color) !important;
+    background-color: var(--primary-color);
+    color: var(--text-color);
+}
+#delete-track-button {
+    font-size: 20px !important;
 }
 
-/* Media Queries pour les petits écrans */
+/* Media Queries pour la réactivité */
 @media (max-width: 800px) {
     #global-player-footer {
         flex-wrap: wrap;
-        padding: 10px;
+        padding-bottom: 10px; 
     }
-
-    #current-info-footer {
-        width: 100%;
-        margin-bottom: 10px;
-        order: 1;
-        padding-right: 0;
-    }
-    
     #center-playback-area {
+        order: -1; 
         width: 100%;
-        max-width: none;
-        order: 3; 
-        margin-top: 10px; 
-        padding: 0;
-        margin: 0; /* Annuler la marge auto pour le petit écran */
+        margin: 5px 0;
     }
-
+    #current-info-footer {
+        display: none; 
+    }
     #right-controls-area {
+        order: 1;
         width: 100%;
-        flex-grow: 1; 
-        justify-content: space-between; 
-        order: 2; 
-        margin-bottom: 5px;
-        min-width: 100px;
+        justify-content: center;
+        padding-top: 5px;
     }
-
-    #player-settings {
-        order: 1; 
-        width: auto; 
+    #footer-controls {
+        padding-top: 5px;
     }
-    
-    #delete-track-button {
-        order: 2; 
-        margin-left: 15px; 
+    #search-bar input {
+        width: 150px;
     }
-    
-    /* Les contrôles de volume et de vitesse doivent être plus petits */
-    #volume-bar, #speed-bar {
-        width: 60px;
+    #connect-stem-btn {
+        display: none;
     }
 }
