@@ -99,6 +99,8 @@ function showAdminPrompt() {
         isAdmin = true;
         document.getElementById('admin-access-btn').textContent = "ADMIN (Activé)";
         alert("Mode Administrateur activé ! Vous pouvez maintenant utiliser le menu ☰ pour importer des morceaux.");
+        // Recharger pour mettre à jour l'UI (boutons de suppression visibles)
+        loadPlaylist(); 
     } else if (code !== null) {
         alert("Code incorrect.");
     }
@@ -233,6 +235,7 @@ async function loadPlaylist() {
             <div id="tracklist-container"><ul id="tracklist-ul"></ul></div>
         `;
     } else {
+        // Recréer les éléments si l'UI est vide
         if (!document.getElementById('album-carousel')) {
              libraryMain.innerHTML = `
                 <h2>LIBRARY</h2>
@@ -241,14 +244,16 @@ async function loadPlaylist() {
             `;
         }
         displayAlbums();
-        displayTracklist(null);
+        // Conserver l'album actif après rechargement si possible
+        displayTracklist(activeAlbum); 
     }
     
     updateAdminUI(); 
 }
 
 function updateAdminUI() {
-    document.getElementById('delete-track-button').style.display = isAdmin ? 'block' : 'none';
+    // Afficher/Cacher le bouton de suppression globale si l'administrateur est connecté
+    document.getElementById('delete-track-button').style.display = isAdmin && currentIndex !== -1 ? 'block' : 'none';
     document.getElementById('admin-access-btn').textContent = isAdmin ? "ADMIN (Activé)" : "ADMIN ACCESS";
 
     const emptyMessage = document.getElementById('empty-library-message');
@@ -291,8 +296,6 @@ function displayAlbums() {
         carousel.appendChild(card);
     });
 }
-
-let activeAlbum = null;
 
 function displayTracklist(albumName) {
     const tracklistUl = document.getElementById('tracklist-ul');
@@ -357,6 +360,7 @@ async function deleteTrack(trackId) {
         
         if (currentPlaylist[currentIndex] && currentPlaylist[currentIndex].id === trackId) {
             stopPlayback();
+            currentIndex = -1; // Réinitialiser l'index
         }
 
         await loadPlaylist(); 
@@ -366,6 +370,17 @@ async function deleteTrack(trackId) {
         console.error(e);
     }
 }
+
+// CORRECTION CRITIQUE : Fonction de suppression du morceau en cours de lecture
+function deleteCurrentTrack() {
+    if (currentIndex === -1 || !currentPlaylist[currentIndex]) {
+        alert("Aucun morceau n'est en cours de lecture à supprimer.");
+        return;
+    }
+    const trackIdToDelete = currentPlaylist[currentIndex].id;
+    deleteTrack(trackIdToDelete);
+}
+// FIN CORRECTION CRITIQUE
 
 function playTrack(index) {
     currentIndex = index;
@@ -380,8 +395,7 @@ function playTrack(index) {
     const playerToUse = isStemMode ? document.getElementById('stem-vocals') : audioPlayer; // Player de référence
 
     document.getElementById('stem-controls').style.display = isStemMode ? 'flex' : 'none';
-    document.getElementById('delete-track-button').style.display = isAdmin ? 'block' : 'none'; 
-
+    
     document.getElementById('current-cover-footer').src = track.cover;
     document.getElementById('current-title-footer').textContent = track.title;
     document.getElementById('current-artist-footer').textContent = `${track.artist} - Album: ${track.album}`;
@@ -401,7 +415,10 @@ function playTrack(index) {
     playerToUse.onended = playNext;
     displayTracklist(track.album);
     
-    // --- CORRECTION : Appliquer les réglages de volume et vitesse à la nouvelle piste ---
+    // Afficher la poubelle si admin est actif
+    updateAdminUI(); 
+    
+    // Appliquer les réglages de volume et vitesse à la nouvelle piste
     const volumeBar = document.getElementById('volume-bar');
     const speedBar = document.getElementById('speed-bar');
     
@@ -411,7 +428,6 @@ function playTrack(index) {
     if (speedBar) {
         updatePlaybackRate(parseFloat(speedBar.value));
     }
-    // -----------------------------------------------------------------------------------
 }
 
 function stopPlayback() {
@@ -432,7 +448,6 @@ function togglePlayPause() {
      
     const track = currentPlaylist[currentIndex];
     const isStemMode = track && track.stems;
-    // Utiliser la fonction pour obtenir le player de référence
     const player = getCurrentPlayer(); 
     
     if (isPlaying) {
@@ -500,7 +515,6 @@ function seekForward(seconds) {
     player.currentTime += seconds;
     
     if (currentPlaylist[currentIndex] && currentPlaylist[currentIndex].stems) {
-        // Synchroniser tous les stems avec le player de référence
         document.getElementById('stem-bass').currentTime = player.currentTime;
         document.getElementById('stem-drums').currentTime = player.currentTime;
         document.getElementById('stem-other').currentTime = player.currentTime;
@@ -515,7 +529,6 @@ function seekBackward(seconds) {
     player.currentTime -= seconds;
 
     if (currentPlaylist[currentIndex] && currentPlaylist[currentIndex].stems) {
-        // Synchroniser tous les stems avec le player de référence
         document.getElementById('stem-bass').currentTime = player.currentTime;
         document.getElementById('stem-drums').currentTime = player.currentTime;
         document.getElementById('stem-other').currentTime = player.currentTime;
@@ -530,11 +543,9 @@ document.getElementById('progress-bar').addEventListener('input', () => {
     const track = currentPlaylist[currentIndex];
     const player = getCurrentPlayer();
 
-    // Le player de référence gère le temps
     player.currentTime = newTime;
     
     if (track && track.stems) {
-        // Synchroniser les autres stems
         document.getElementById('stem-bass').currentTime = newTime;
         document.getElementById('stem-drums').currentTime = newTime;
         document.getElementById('stem-other').currentTime = newTime;
@@ -580,10 +591,7 @@ function updateVolume(volume) {
     const mainPlayer = document.getElementById('audio-player');
     const stemPlayers = document.querySelectorAll('.stem-player');
 
-    // Applique le volume à la piste principale
     mainPlayer.volume = volume; 
-    
-    // Applique le volume à tous les stems
     stemPlayers.forEach(player => player.volume = volume);
 }
 
@@ -591,11 +599,9 @@ function updatePlaybackRate(rate) {
     const mainPlayer = document.getElementById('audio-player');
     const stemPlayers = document.querySelectorAll('.stem-player');
 
-    // La modification de la vitesse de lecture (playbackRate) modifie aussi le pitch (hauteur)
     mainPlayer.playbackRate = rate;
     stemPlayers.forEach(player => player.playbackRate = rate);
     
-    // Mise à jour de l'affichage
     document.getElementById('speed-display').textContent = `${rate.toFixed(1)}x`;
 }
 
@@ -615,7 +621,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // --- Gestion de la barre de progression (déjà en place) ---
+    // --- Gestion de la barre de progression (mise à jour visuelle) ---
     const audioPlayerElement = document.getElementById('audio-player');
     const progressBar = document.getElementById('progress-bar');
     const currentTimeSpan = document.getElementById('current-time');
@@ -633,6 +639,7 @@ document.addEventListener('DOMContentLoaded', () => {
         durationSpan.textContent = formatTime(duration);
         progressBar.max = duration;
         
+        // On attache les écouteurs pour la barre de progression
         player.addEventListener('timeupdate', () => {
             const currentTime = player.currentTime;
             currentTimeSpan.textContent = formatTime(currentTime);
@@ -651,23 +658,21 @@ document.addEventListener('DOMContentLoaded', () => {
     // -------------------------------------------------------------
 
 
-    // --- NOUVEAU : Écouteur Volume ---
+    // --- Écouteur Volume ---
     const volumeBar = document.getElementById('volume-bar');
     if (volumeBar) {
         volumeBar.addEventListener('input', (e) => {
             updateVolume(parseFloat(e.target.value));
         });
-        // Initialisation Volume
         updateVolume(parseFloat(volumeBar.value));
     }
     
-    // --- NOUVEAU : Écouteur Vitesse ---
+    // --- Écouteur Vitesse ---
     const speedBar = document.getElementById('speed-bar');
     if (speedBar) {
         speedBar.addEventListener('input', (e) => {
             updatePlaybackRate(parseFloat(e.target.value));
         });
-        // Initialisation Vitesse
         updatePlaybackRate(parseFloat(speedBar.value));
     }
     
