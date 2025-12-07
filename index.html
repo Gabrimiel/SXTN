@@ -6,21 +6,27 @@
     <title>SXTN - Music Player (Compact)</title>
     <link rel="stylesheet" href="style.css">
     
-    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
-    
-    <script>
-        // Remplacez le contenu de ce script par le code de l'étape 2 de votre console Firebase
-        // Votre code doit contenir 'const firebaseConfig = { ... }' et 'firebase.initializeApp(firebaseConfig);'
-        
-        // Exemples des lignes à remplacer par VOTRE code réel :
-        const firebaseConfig = {
-          apiKey: "AIzaSyA7D7V1C_wic-dop59E_x68So_RVrZAvC0", // Votre clé API
-          authDomain: "sxtn-music-player.firebaseapp.com", // Votre domaine Auth
-          projectId: "sxtn-music-player",
-          storageBucket: "sxtn-music-player.appspot.com",
-          messagingSenderId: "410421509994",
-          appId: "1:410421509994:web:957feeb477e20875ddd2f13"
+    // Import the functions you need from the SDKs you need
+import { initializeApp } from "firebase/app";
+import { getAnalytics } from "firebase/analytics";
+// TODO: Add SDKs for Firebase products that you want to use
+// https://firebase.google.com/docs/web/setup#available-libraries
+
+// Your web app's Firebase configuration
+// For Firebase JS SDK v7.20.0 and later, measurementId is optional
+const firebaseConfig = {
+  apiKey: "AIzaSyAD7VC1P_wiC-dop59E_x68So_RVrzAvC0",
+  authDomain: "sxtn-music-player.firebaseapp.com",
+  projectId: "sxtn-music-player",
+  storageBucket: "sxtn-music-player.firebasestorage.app",
+  messagingSenderId: "410421509994",
+  appId: "1:410421509994:web:957feeb477e20875dd2f13",
+  measurementId: "G-Z0B33S2VHC"
+};
+
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
+const analytics = getAnalytics(app);
         };
 
         // Initialisation de Firebase
