@@ -91,7 +91,7 @@
 
                 <div id="playback-bar">
                     <span id="current-time">0:00</span>
-                    <audio id="audio-player" preload="auto" data-current-index="-1"></audio>
+                    <audio id="audio-player" data-current-index="-1"></audio>
                     <input type="range" id="progress-bar" value="0" min="0" max="100" step="0.1">
                     <span id="duration">0:00</span>
                 </div>
@@ -100,10 +100,10 @@
             <div id="right-controls-area">
                 <div id="stem-controls" style="display: none;">
                     <div id="stem-container" style="display: flex; gap: 5px; padding: 0;"></div>
-                    <audio id="stem-vocals" preload="auto" class="stem-player"></audio>
-                    <audio id="stem-bass" preload="auto" class="stem-player"></audio>
-                    <audio id="stem-drums" preload="auto" class="stem-player"></audio>
-                    <audio id="stem-other" preload="auto" class="stem-player"></audio>
+                    <audio id="stem-vocals" class="stem-player"></audio>
+                    <audio id="stem-bass" class="stem-player"></audio>
+                    <audio id="stem-drums" class="stem-player"></audio>
+                    <audio id="stem-other" class="stem-player"></audio>
                 </div>
                 <button id="delete-track-button" onclick="deleteCurrentTrack()" style="background-color: transparent; color: #cc3333; display: none; margin-left: 15px;">🗑️</button>
             </div>
