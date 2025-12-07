@@ -2,8 +2,7 @@
 let currentPlaylist = [];
 let currentIndex = -1;
 let isPlaying = false;
-let isAdmin = false; 
-let activeAlbum = null;
+let isAdmin = false; // Nouvelle variable pour le mode Admin
 
 // Code secret pour l'accès Admin
 const ADMIN_CODE = "080216";
@@ -45,7 +44,8 @@ async function addTrackToDB(trackData) {
         const transaction = db.transaction([STORE_NAME], 'readwrite');
         const store = transaction.objectStore(STORE_NAME);
 
-        // Ajout du morceau
+        // Pas besoin du champ 'user' dans trackData ici
+        
         const request = store.add(trackData);
         
         request.onsuccess = () => resolve(request.result);
@@ -89,18 +89,19 @@ async function deleteTrackFromDB(trackId) {
 // =========================================================
 
 function showAdminPrompt() {
+    // Vérifie si nous sommes déjà en mode Admin
     if (isAdmin) {
         alert("Mode Administrateur déjà activé.");
         return;
     }
+    
+    // Utilisation d'une boîte de dialogue simple pour le code
     const code = prompt("Entrez le code Admin pour accéder à l'importation de morceaux :");
 
     if (code === ADMIN_CODE) {
         isAdmin = true;
         document.getElementById('admin-access-btn').textContent = "ADMIN (Activé)";
         alert("Mode Administrateur activé ! Vous pouvez maintenant utiliser le menu ☰ pour importer des morceaux.");
-        // Recharger pour mettre à jour l'UI (boutons de suppression visibles)
-        loadPlaylist(); 
     } else if (code !== null) {
         alert("Code incorrect.");
     }
@@ -109,6 +110,7 @@ function showAdminPrompt() {
 function toggleSideMenu() {
     const menu = document.getElementById('side-menu');
     
+    // Si on n'est PAS Admin, on n'ouvre pas le menu d'importation
     if (!isAdmin && !menu.classList.contains('open')) {
         alert("Vous devez activer le mode Administrateur (ADMIN ACCESS) pour importer des morceaux.");
         return;
@@ -121,6 +123,7 @@ function toggleSideMenu() {
 // GESTION LECTEUR ET PLAYLIST
 // =========================================================
 
+// Fonction utilitaire pour lire un fichier en Base64
 function readFileAsDataURL(file) {
     return new Promise((resolve, reject) => {
         const reader = new FileReader();
@@ -130,8 +133,9 @@ function readFileAsDataURL(file) {
     });
 }
 
+// Récupère l'élément AudioPlayer principal ou le Vocal Stem Player
 function getCurrentPlayer() {
-    // Retourne le player audio de référence (vocals en mode stem, sinon le player principal)
+    // Si des stems sont en cours de lecture, on utilise le vocal player comme maître
     if (currentPlaylist[currentIndex] && currentPlaylist[currentIndex].stems) {
         return document.getElementById('stem-vocals');
     }
@@ -207,6 +211,7 @@ async function addTrack() {
         cover: coverBase64,
         mainAudio: mainAudioBase64,
         stems: hasStems ? stemData : null,
+        // Plus de champ 'user' nécessaire
     };
 
     try {
@@ -221,9 +226,11 @@ async function addTrack() {
 }
 
 async function loadPlaylist() {
+    // Tous les morceaux sont chargés, peu importe qui les a ajoutés.
     const allTracks = await readAllTracksFromDB(); 
     currentPlaylist = allTracks; 
 
+    // Affiche un message si la bibliothèque est vide.
     const libraryMain = document.getElementById('library-main');
     if (currentPlaylist.length === 0) {
         libraryMain.innerHTML = `
@@ -235,7 +242,7 @@ async function loadPlaylist() {
             <div id="tracklist-container"><ul id="tracklist-ul"></ul></div>
         `;
     } else {
-        // Recréer les éléments si l'UI est vide
+        // Pour s'assurer que les conteneurs sont présents si on recharge
         if (!document.getElementById('album-carousel')) {
              libraryMain.innerHTML = `
                 <h2>LIBRARY</h2>
@@ -244,18 +251,18 @@ async function loadPlaylist() {
             `;
         }
         displayAlbums();
-        // Conserver l'album actif après rechargement si possible
-        displayTracklist(activeAlbum); 
+        displayTracklist(null);
     }
     
+    // Mise à jour de l'affichage en mode Admin/Lecture seule
     updateAdminUI(); 
 }
 
 function updateAdminUI() {
-    // Afficher/Cacher le bouton de suppression globale si l'administrateur est connecté
-    document.getElementById('delete-track-button').style.display = isAdmin && currentIndex !== -1 ? 'block' : 'none';
-    document.getElementById('admin-access-btn').textContent = isAdmin ? "ADMIN (Activé)" : "ADMIN ACCESS";
-
+    // Seul l'Admin peut supprimer des morceaux
+    document.getElementById('delete-track-button').style.display = isAdmin ? 'block' : 'none';
+    
+    // Le message de la bibliothèque peut aussi changer si elle est vide
     const emptyMessage = document.getElementById('empty-library-message');
     if (emptyMessage) {
         emptyMessage.textContent = isAdmin 
@@ -269,6 +276,7 @@ function displayAlbums() {
     if (!carousel) return; 
     carousel.innerHTML = '';
     
+    // Regrouper les morceaux par album
     const albums = currentPlaylist.reduce((acc, track) => {
         if (!acc[track.album]) {
             acc[track.album] = {
@@ -282,6 +290,7 @@ function displayAlbums() {
         return acc;
     }, {});
 
+    // Afficher chaque album
     Object.values(albums).forEach(albumData => {
         const card = document.createElement('div');
         card.className = 'album-card';
@@ -297,11 +306,14 @@ function displayAlbums() {
     });
 }
 
+let activeAlbum = null;
+
 function displayTracklist(albumName) {
     const tracklistUl = document.getElementById('tracklist-ul');
     if (!tracklistUl) return;
     tracklistUl.innerHTML = '';
     
+    // Mettre à jour la carte active
     document.querySelectorAll('.album-card').forEach(card => {
         card.classList.remove('active-card');
     });
@@ -322,6 +334,7 @@ function displayTracklist(albumName) {
             li.className = `track-item ${globalIndex === currentIndex ? 'active-track' : ''}`;
             li.setAttribute('data-index', globalIndex);
             
+            // Le bouton PLAY/PAUSE est géré dans le li pour toute la ligne
             li.onclick = () => playTrack(globalIndex);
 
             const playText = track.stems ? ' [STEMS]' : '';
@@ -333,7 +346,7 @@ function displayTracklist(albumName) {
                     <span style="font-size: 0.8em; color: #777;">${playText}</span>
                 </div>
                 <div class="track-controls">
-                    ${isAdmin ? `<button onclick="event.stopPropagation(); deleteTrack(${track.id})" class="track-delete-button">🗑️</button>` : ''}
+                     ${isAdmin ? `<button onclick="event.stopPropagation(); deleteTrack(${track.id})" class="track-delete-button">🗑️</button>` : ''}
                 </div>
             `;
             tracklistUl.appendChild(li);
@@ -358,31 +371,23 @@ async function deleteTrack(trackId) {
         await deleteTrackFromDB(trackId);
         alert("Morceau supprimé.");
         
+        // Réinitialiser le player si le morceau en cours est supprimé
         if (currentPlaylist[currentIndex] && currentPlaylist[currentIndex].id === trackId) {
             stopPlayback();
-            currentIndex = -1; // Réinitialiser l'index
         }
 
-        await loadPlaylist(); 
-        displayTracklist(activeAlbum); 
+        await loadPlaylist(); // Recharge tout
+        displayTracklist(activeAlbum); // Affiche la tracklist actuelle (qui sera mise à jour)
     } catch (e) {
         alert("Erreur lors de la suppression du morceau.");
         console.error(e);
     }
 }
 
-// CORRECTION CRITIQUE : Fonction de suppression du morceau en cours de lecture
-function deleteCurrentTrack() {
-    if (currentIndex === -1 || !currentPlaylist[currentIndex]) {
-        alert("Aucun morceau n'est en cours de lecture à supprimer.");
-        return;
-    }
-    const trackIdToDelete = currentPlaylist[currentIndex].id;
-    deleteTrack(trackIdToDelete);
-}
-// FIN CORRECTION CRITIQUE
+// ... (Les fonctions playTrack, stopPlayback, togglePlayPause, playNext, playPrevious, seekForward, seekBackward, setupStemButtons restent identiques, mais doivent être incluses dans le fichier script.js. Je ne les remets pas ici par souci de concision, mais assurez-vous de garder la version complète.)
 
 function playTrack(index) {
+    // ... (Corps de la fonction playTrack) ...
     currentIndex = index;
     const track = currentPlaylist[currentIndex];
 
@@ -391,11 +396,12 @@ function playTrack(index) {
     stopPlayback();
 
     const audioPlayer = document.getElementById('audio-player');
+    const playerToUse = track.stems ? document.getElementById('stem-vocals') : audioPlayer;
     const isStemMode = !!track.stems;
-    const playerToUse = isStemMode ? document.getElementById('stem-vocals') : audioPlayer; // Player de référence
 
     document.getElementById('stem-controls').style.display = isStemMode ? 'flex' : 'none';
-    
+    document.getElementById('delete-track-button').style.display = isAdmin ? 'block' : 'none'; // Affichage conditionnel
+
     document.getElementById('current-cover-footer').src = track.cover;
     document.getElementById('current-title-footer').textContent = track.title;
     document.getElementById('current-artist-footer').textContent = `${track.artist} - Album: ${track.album}`;
@@ -414,20 +420,6 @@ function playTrack(index) {
     
     playerToUse.onended = playNext;
     displayTracklist(track.album);
-    
-    // Afficher la poubelle si admin est actif
-    updateAdminUI(); 
-    
-    // Appliquer les réglages de volume et vitesse à la nouvelle piste
-    const volumeBar = document.getElementById('volume-bar');
-    const speedBar = document.getElementById('speed-bar');
-    
-    if (volumeBar) {
-        updateVolume(parseFloat(volumeBar.value));
-    }
-    if (speedBar) {
-        updatePlaybackRate(parseFloat(speedBar.value));
-    }
 }
 
 function stopPlayback() {
@@ -448,7 +440,7 @@ function togglePlayPause() {
      
     const track = currentPlaylist[currentIndex];
     const isStemMode = track && track.stems;
-    const player = getCurrentPlayer(); 
+    const player = isStemMode ? document.getElementById('stem-vocals') : document.getElementById('audio-player');
     
     if (isPlaying) {
         player.pause();
@@ -510,11 +502,13 @@ function playPrevious() {
 function seekForward(seconds) {
     if (currentIndex === -1) return;
     
-    const player = getCurrentPlayer(); 
+    const track = currentPlaylist[currentIndex];
+    const isStemMode = track && track.stems;
+    const player = isStemMode ? document.getElementById('stem-vocals') : document.getElementById('audio-player');
     
     player.currentTime += seconds;
     
-    if (currentPlaylist[currentIndex] && currentPlaylist[currentIndex].stems) {
+    if (isStemMode) {
         document.getElementById('stem-bass').currentTime = player.currentTime;
         document.getElementById('stem-drums').currentTime = player.currentTime;
         document.getElementById('stem-other').currentTime = player.currentTime;
@@ -524,11 +518,13 @@ function seekForward(seconds) {
 function seekBackward(seconds) {
     if (currentIndex === -1) return;
 
-    const player = getCurrentPlayer(); 
+    const track = currentPlaylist[currentIndex];
+    const isStemMode = track && track.stems;
+    const player = isStemMode ? document.getElementById('stem-vocals') : document.getElementById('audio-player');
 
     player.currentTime -= seconds;
 
-    if (currentPlaylist[currentIndex] && currentPlaylist[currentIndex].stems) {
+    if (isStemMode) {
         document.getElementById('stem-bass').currentTime = player.currentTime;
         document.getElementById('stem-drums').currentTime = player.currentTime;
         document.getElementById('stem-other').currentTime = player.currentTime;
@@ -541,14 +537,18 @@ document.getElementById('progress-bar').addEventListener('input', () => {
     
     const newTime = document.getElementById('progress-bar').value;
     const track = currentPlaylist[currentIndex];
-    const player = getCurrentPlayer();
 
-    player.currentTime = newTime;
-    
-    if (track && track.stems) {
-        document.getElementById('stem-bass').currentTime = newTime;
-        document.getElementById('stem-drums').currentTime = newTime;
-        document.getElementById('stem-other').currentTime = newTime;
+    if (track) {
+        const mainPlayer = document.getElementById('audio-player');
+        
+        if (track.stems) {
+            document.getElementById('stem-vocals').currentTime = newTime;
+            document.getElementById('stem-bass').currentTime = newTime;
+            document.getElementById('stem-drums').currentTime = newTime;
+            document.getElementById('stem-other').currentTime = newTime;
+        } else {
+            mainPlayer.currentTime = newTime;
+        }
     }
 });
 
@@ -583,99 +583,5 @@ function setupStemButtons() {
     });
 }
 
-// =========================================================
-// GESTION VOLUME ET VITESSE
-// =========================================================
-
-function updateVolume(volume) {
-    const mainPlayer = document.getElementById('audio-player');
-    const stemPlayers = document.querySelectorAll('.stem-player');
-
-    mainPlayer.volume = volume; 
-    stemPlayers.forEach(player => player.volume = volume);
-}
-
-function updatePlaybackRate(rate) {
-    const mainPlayer = document.getElementById('audio-player');
-    const stemPlayers = document.querySelectorAll('.stem-player');
-
-    mainPlayer.playbackRate = rate;
-    stemPlayers.forEach(player => player.playbackRate = rate);
-    
-    document.getElementById('speed-display').textContent = `${rate.toFixed(1)}x`;
-}
-
-
-// =========================================================
-// INITIALISATION DE LA PAGE
-// =========================================================
-
-document.addEventListener('DOMContentLoaded', () => {
-    
-    // Logique pour les champs Stems dans le menu latéral
-    const stemModeOption = document.getElementById('stem-mode-option');
-    const manualStemFields = document.getElementById('manual-stem-fields');
-    if (stemModeOption) {
-        stemModeOption.addEventListener('change', () => {
-            manualStemFields.style.display = stemModeOption.checked ? 'block' : 'none';
-        });
-    }
-
-    // --- Gestion de la barre de progression (mise à jour visuelle) ---
-    const audioPlayerElement = document.getElementById('audio-player');
-    const progressBar = document.getElementById('progress-bar');
-    const currentTimeSpan = document.getElementById('current-time');
-    const durationSpan = document.getElementById('duration');
-    
-    function formatTime(seconds) {
-        if (isNaN(seconds) || seconds === Infinity) return "0:00";
-        const minutes = Math.floor(seconds / 60);
-        const remainingSeconds = Math.floor(seconds % 60);
-        return `${minutes}:${remainingSeconds < 10 ? '0' : ''}${remainingSeconds}`;
-    }
-
-    const updateTimeDisplay = (player) => {
-        const duration = player.duration;
-        durationSpan.textContent = formatTime(duration);
-        progressBar.max = duration;
-        
-        // On attache les écouteurs pour la barre de progression
-        player.addEventListener('timeupdate', () => {
-            const currentTime = player.currentTime;
-            currentTimeSpan.textContent = formatTime(currentTime);
-            progressBar.value = currentTime;
-        });
-    }
-
-    if (audioPlayerElement) {
-        audioPlayerElement.addEventListener('loadedmetadata', () => updateTimeDisplay(audioPlayerElement));
-    }
-    
-    const stemVocals = document.getElementById('stem-vocals');
-    if (stemVocals) {
-        stemVocals.addEventListener('loadedmetadata', () => updateTimeDisplay(stemVocals));
-    }
-    // -------------------------------------------------------------
-
-
-    // --- Écouteur Volume ---
-    const volumeBar = document.getElementById('volume-bar');
-    if (volumeBar) {
-        volumeBar.addEventListener('input', (e) => {
-            updateVolume(parseFloat(e.target.value));
-        });
-        updateVolume(parseFloat(volumeBar.value));
-    }
-    
-    // --- Écouteur Vitesse ---
-    const speedBar = document.getElementById('speed-bar');
-    if (speedBar) {
-        speedBar.addEventListener('input', (e) => {
-            updatePlaybackRate(parseFloat(e.target.value));
-        });
-        updatePlaybackRate(parseFloat(speedBar.value));
-    }
-    
-    // Lancement initial de la playlist
-    loadPlaylist();
-});
+// Lancement initial de la playlist au chargement de la page
+document.addEventListener('DOMContentLoaded', loadPlaylist);
