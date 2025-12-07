@@ -19,7 +19,6 @@ const STEM_SUFFIXES = {
 // =========================================================
 // GESTION IndexedDB (Base de données locale pour les Morceaux - Global)
 // =========================================================
-// NOTE : IndexedDB est maintenu, mais stockera maintenant des URL/chemins.
 
 const DB_NAME = 'SXTNDatabase';
 const DB_VERSION = 1;
@@ -92,7 +91,7 @@ async function deleteTrackFromDB(trackId) {
 }
 
 // =========================================================
-// GESTION MODE ADMIN
+// GESTION MODE ADMIN (CORRECTION: cette fonction est essentielle et manquait)
 // =========================================================
 
 function showAdminPrompt() {
@@ -116,6 +115,7 @@ function showAdminPrompt() {
 function toggleSideMenu() {
     const menu = document.getElementById('side-menu');
     
+    // N'ouvrir le menu que si l'Admin est actif, ou s'il est déjà ouvert
     if (!isAdmin && !menu.classList.contains('open')) {
         alert("Vous devez activer le mode Administrateur (ADMIN ACCESS) pour importer des morceaux.");
         return;
@@ -138,7 +138,10 @@ async function addTrack() {
     const title = document.getElementById('music-title').value || "Titre Inconnu";
     const artist = document.getElementById('music-description').value || "Artiste Inconnu";
     const album = document.getElementById('music-artist').value || "Album Inconnu";
-    const coverPath = document.getElementById('cover-path').value || "placeholder.png"; // Utilise un champ de texte
+    
+    // CORRECTION: Chemin par défaut vers logo.png ou placeholder.png (si à la racine)
+    const coverPath = document.getElementById('cover-path').value || "logo.png"; 
+    
     const hasStems = document.getElementById('stem-mode-option').checked;
 
     let mainAudioPath = null;
@@ -150,7 +153,6 @@ async function addTrack() {
              alert("Veuillez fournir le chemin de base du Stem (ex: audio/stems/Nom_du_morceau).");
              return;
         }
-        // Pas besoin d'enregistrer les 4 chemins, on les déduira du chemin de base.
     } else {
         mainAudioPath = document.getElementById('audio-path').value;
         if (!mainAudioPath) {
@@ -180,7 +182,7 @@ async function addTrack() {
 }
 
 
-// Logique pour charger la playlist (inchangée)
+// Logique pour charger la playlist 
 async function loadPlaylist() {
     const allTracks = await readAllTracksFromDB(); 
     currentPlaylist = allTracks; 
@@ -210,7 +212,7 @@ async function loadPlaylist() {
     updateAdminUI(); 
 }
 
-// Logique pour mettre à jour l'interface Admin (inchangée)
+// Logique pour mettre à jour l'interface Admin 
 function updateAdminUI() {
     document.getElementById('delete-track-button').style.display = isAdmin ? 'block' : 'none';
     
@@ -224,7 +226,7 @@ function updateAdminUI() {
     }
 }
 
-// Logique d'affichage des albums (inchangée)
+// Logique d'affichage des albums 
 function displayAlbums() {
     const carousel = document.getElementById('album-carousel');
     if (!carousel) return; 
@@ -260,7 +262,7 @@ function displayAlbums() {
 
 let activeAlbum = null;
 
-// Logique d'affichage de la liste des morceaux (inchangée)
+// Logique d'affichage de la liste des morceaux 
 function displayTracklist(albumName) {
     const tracklistUl = document.getElementById('tracklist-ul');
     if (!tracklistUl) return;
@@ -308,7 +310,7 @@ function displayTracklist(albumName) {
     }
 }
 
-// Logique de suppression de morceau (inchangée)
+// Logique de suppression de morceau 
 async function deleteTrack(trackId) {
     if (!isAdmin) {
         alert("Seul l'Administrateur peut supprimer des morceaux.");
@@ -410,7 +412,7 @@ setInterval(() => {
 }, 100);
 
 
-// Logique pour arrêter la lecture (inchangée)
+// Logique pour arrêter la lecture 
 function stopPlayback() {
     isPlaying = false;
     document.getElementById('play-pause-button').textContent = '▶️';
@@ -431,7 +433,7 @@ function stopPlayback() {
 }
 
 
-// Logique de pause/reprise (inchangée)
+// Logique de pause/reprise 
 function togglePlayPause() {
      if (currentIndex === -1 || currentPlaylist.length === 0) return;
      
@@ -556,7 +558,7 @@ function playPrevious() {
     }
 }
 
-// FONCTION SEEK (AVANCE RAPIDE) - Simplifiée car les URL sont plus rapides
+// FONCTION SEEK (AVANCE RAPIDE) - Simplifiée pour un seek rapide
 function seekForward(seconds) {
     if (currentIndex === -1) return;
     
@@ -574,7 +576,7 @@ function seekForward(seconds) {
     }
 }
 
-// FONCTION SEEK (RETOUR RAPIDE) - Simplifiée car les URL sont plus rapides
+// FONCTION SEEK (RETOUR RAPIDE) - Simplifiée pour un seek rapide
 function seekBackward(seconds) {
     if (currentIndex === -1) return;
 
