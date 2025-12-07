@@ -1,303 +1,449 @@
-/* --- VARIABLES ET RESET --- */
-:root {
-    --primary-color: #5d00a0; /* Violet SXTN */
-    --secondary-color: #d1b4ff; /* Violet Clair */
-    --background-color: #f7f7f7;
-    --card-background: #ffffff;
-    --footer-height: 80px;
-}
+/* NOUVEAU STYLE - Compact et Centré */
 
-* {
-    box-sizing: border-box;
-    margin: 0;
-    padding: 0;
+:root {
+    --bg-color: #f7f3e8; /* Fond clair */
+    --text-color: #333333;
+    --primary-color: #1DB954; /* Vert Spotify */
+    --secondary-color: #555;
+    --card-bg: #e0d9cd; /* Fond carte album */
+    --hover-bg: #d4cfc1;
 }
 
 body {
-    font-family: Arial, sans-serif;
-    background-color: var(--background-color);
-    color: #333;
+    font-family: 'Arial', sans-serif;
+    background-color: var(--bg-color);
+    color: var(--text-color);
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
     min-height: 100vh;
-    display: flex;
-    flex-direction: column;
 }
 
-/* --- HEADER ET NAVIGATION --- */
-header {
-    background-color: var(--primary-color);
-    color: white;
-    padding: 15px 20px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    position: fixed;
-    width: 100%;
-    top: 0;
-    z-index: 10;
-}
-
-header h1 {
-    font-size: 1.5em;
-}
-
-header button {
-    background: none;
-    border: none;
-    color: white;
-    cursor: pointer;
-    font-size: 1em;
-    padding: 5px 10px;
-}
-
-/* --- MAIN CONTENT / LIBRARY --- */
-main {
-    flex-grow: 1;
-    padding: 20px;
-    padding-top: 80px; /* Espace pour le header fixe */
-    padding-bottom: var(--footer-height); /* Espace pour le footer fixe */
-}
-
-main h2 {
-    margin-bottom: 20px;
-    color: var(--primary-color);
-}
-
-/* --- ALBUM CAROUSEL --- */
-#album-carousel {
-    display: flex;
-    overflow-x: auto;
-    gap: 20px;
-    padding-bottom: 20px;
-    white-space: nowrap;
-}
-
-.album-card {
-    flex: 0 0 auto;
-    width: 150px;
+h1, h2 {
+    color: var(--text-color);
+    font-weight: normal;
     text-align: center;
-    cursor: pointer;
+    letter-spacing: 5px;
+    margin-bottom: 25px;
+}
+
+/* --- Conteneur d'Authentification (Garde le style sombre pour le login) --- */
+#auth-container {
+    background: #1e1e1e;
+    color: #ffffff;
+    max-width: 400px;
+    width: 90%;
+    margin: 100px auto;
+    padding: 40px;
     border-radius: 8px;
-    overflow: hidden;
-    transition: transform 0.2s, box-shadow 0.2s;
-    background-color: var(--card-background);
-    padding-bottom: 10px;
-    border: 2px solid transparent;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+    text-align: center;
 }
+#auth-container input { background: #333; color: #fff; border: none; padding: 10px; margin: 8px 0; width: 100%; box-sizing: border-box; }
+#auth-container button { background-color: var(--primary-color); color: white; padding: 10px; border: none; border-radius: 50px; cursor: pointer; margin-top: 15px; width: 100%; }
+#auth-container a { color: var(--primary-color); }
+#auth-container h2, #auth-container h3 { color: var(--primary-color); }
 
-.album-card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
-}
+/* ------------------------------------------------------------------------- */
+/* --- CONTENEUR PRINCIPAL (APP) --- */
+/* ------------------------------------------------------------------------- */
 
-.album-card.active-card {
-    border-color: var(--primary-color);
-}
-
-.album-cover-img {
-    width: 100%;
-    height: 150px;
-    object-fit: cover;
-    margin-bottom: 5px;
-}
-
-.album-card-title {
-    font-weight: bold;
-    font-size: 0.9em;
-    white-space: normal;
-    padding: 0 5px;
-}
-
-.album-card-artist {
-    font-size: 0.8em;
-    color: #777;
-}
-
-/* --- TRACKLIST --- */
-#tracklist-ul {
-    list-style: none;
-    padding-top: 20px;
-}
-
-.track-item {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 10px;
-    margin-bottom: 5px;
-    background-color: var(--card-background);
-    border-radius: 5px;
-    cursor: pointer;
-    transition: background-color 0.1s;
-}
-
-.track-item:hover {
-    background-color: #f0f0f0;
-}
-
-.active-track {
-    background-color: var(--secondary-color);
-    color: var(--primary-color);
-    font-weight: bold;
-}
-
-.track-item-info {
-    display: flex;
-    align-items: center;
-}
-
-.track-item-cover {
-    width: 40px;
-    height: 40px;
-    object-fit: cover;
-    margin-right: 10px;
-    border-radius: 3px;
-}
-
-/* --- FOOTER / PLAYER CONTROLS --- */
-footer {
-    position: fixed;
-    bottom: 0;
-    width: 100%;
-    height: var(--footer-height);
-    background-color: #333;
-    color: white;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 0 20px;
-    box-shadow: 0 -2px 5px rgba(0, 0, 0, 0.1);
-    z-index: 10;
-}
-
-#controls-left {
-    display: flex;
-    align-items: center;
-    width: 25%;
-}
-
-.footer-cover {
-    width: 50px;
-    height: 50px;
-    object-fit: cover;
-    margin-right: 15px;
-    border-radius: 3px;
-}
-
-.track-info div {
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    max-width: 150px; 
-}
-
-#controls-center {
+#app-container {
     display: flex;
     flex-direction: column;
-    align-items: center;
-    width: 50%;
+    flex-grow: 1;
+    max-width: 1000px;
+    width: 95%;
+    margin: 0 auto;
+    /* Marge pour éviter que le footer ne cache le contenu */
+    padding-bottom: 80px; 
 }
 
-.playback-buttons button {
+/* 1. HEADER */
+#main-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 0;
+    border-bottom: 1px solid var(--hover-bg);
+}
+
+#logo-icon {
+    /* Cet élément conteneur n'a plus besoin d'une grande taille de police */
+    margin-right: 20px;
+    height: 30px; /* Hauteur du conteneur pour l'alignement */
+    display: flex;
+    align-items: center;
+}
+
+/* RÈGLE CLÉ pour limiter la taille du PNG */
+#site-logo {
+    height: 30px; /* Taille désirée pour qu'il soit petit */
+    width: auto;
+    object-fit: contain;
+}
+
+#search-bar input {
+    padding: 8px 15px;
+    border: 1px solid var(--secondary-color);
+    border-radius: 50px;
+    width: 250px;
+    text-align: center;
+    background: transparent;
+    color: var(--text-color);
+}
+
+#connect-stem-btn {
+    background: transparent;
+    border: none;
+    color: var(--text-color);
+    font-weight: bold;
+    cursor: pointer;
+    text-decoration: underline;
+    margin-right: 15px;
+}
+
+#menu-toggle {
     background: none;
     border: none;
-    color: white;
-    font-size: 1.5em;
+    font-size: 24px;
     cursor: pointer;
-    padding: 5px 10px;
+    color: var(--text-color);
 }
 
-.progress-bar-container {
-    display: flex;
-    align-items: center;
-    width: 100%;
-    max-width: 400px;
-    margin-top: 5px;
-}
-
-#progress-bar {
-    flex-grow: 1;
-    margin: 0 10px;
-}
-
-/* --- STEM CONTROLS --- */
-#stem-controls {
-    display: flex;
-    justify-content: center;
-    margin-top: 10px;
-}
-
-.stem-mute-button {
-    background-color: rgba(255, 255, 255, 0.2);
-    color: white;
-    border: 1px solid white;
-    padding: 5px 10px;
-    margin: 0 5px;
-    border-radius: 5px;
-    cursor: pointer;
-    transition: background-color 0.1s;
-}
-
-.stem-mute-button.active-stem {
-    background-color: var(--primary-color);
-    border-color: var(--secondary-color);
-}
-
-/* --- SIDE MENU (ADMIN) --- */
-.side-menu {
+/* 2. MENU LATÉRAL (Side Menu) */
+#side-menu {
     position: fixed;
     top: 0;
     right: 0;
     width: 300px;
     height: 100%;
-    background-color: #fff;
-    box-shadow: -2px 0 10px rgba(0, 0, 0, 0.2);
+    background-color: var(--bg-color);
+    box-shadow: -4px 0 15px rgba(0, 0, 0, 0.2);
     transform: translateX(100%);
     transition: transform 0.3s ease-in-out;
+    z-index: 1000;
     padding: 20px;
-    z-index: 20;
     overflow-y: auto;
 }
 
-.side-menu.open {
+#side-menu.open {
     transform: translateX(0);
 }
 
-.side-menu input[type="text"],
-.side-menu input[type="file"] {
-    display: block;
+#close-menu-btn {
+    background: var(--secondary-color);
+    color: white;
+    padding: 8px;
+    border: none;
+    border-radius: 4px;
+    margin-bottom: 20px;
+    cursor: pointer;
+}
+
+.import-section h2 {
+    text-align: left;
+    margin-bottom: 15px;
+    letter-spacing: normal;
+}
+.import-section input[type="text"], .import-section input[type="file"] {
     width: 100%;
     padding: 8px;
-    margin-bottom: 10px;
-    border: 1px solid #ccc;
+    margin: 5px 0 10px 0;
+    border: 1px solid var(--secondary-color);
     border-radius: 4px;
+    background: #fff;
+    color: var(--text-color);
+    box-sizing: border-box;
 }
-
-.side-menu label {
-    display: block;
-    font-weight: bold;
-    margin-top: 10px;
-    margin-bottom: 5px;
-}
-
-.add-track-btn {
-    width: 100%;
+.import-section button {
     background-color: var(--primary-color);
     color: white;
     padding: 10px;
     border: none;
-    border-radius: 4px;
+    border-radius: 50px;
     cursor: pointer;
-    margin-top: 15px;
+    margin-top: 20px;
+    width: 100%;
 }
 
-.close-btn {
-    position: absolute;
-    top: 10px;
-    right: 10px;
+/* 3. CONTENU CENTRAL (Library) */
+#library-main {
+    padding: 30px 0;
+    flex-grow: 1;
+}
+
+/* CAROUSEL DES ALBUMS */
+#album-carousel {
+    display: flex;
+    overflow-x: auto; /* Permet de défiler horizontalement */
+    gap: 20px;
+    padding: 10px 0;
+    margin-bottom: 40px;
+    justify-content: center; /* Centrer les albums si l'écran est large */
+}
+
+.album-card {
+    min-width: 150px;
+    max-width: 150px;
+    text-align: center;
+    cursor: pointer;
+    transition: transform 0.2s;
+}
+
+.album-card:hover {
+    transform: translateY(-5px);
+}
+
+.album-cover-img {
+    width: 100%;
+    height: 150px;
+    border-radius: 50%; /* Style Vinyle/Rond */
+    object-fit: cover;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+    transition: all 0.2s;
+}
+
+.album-card.active-card .album-cover-img {
+    box-shadow: 0 0 0 4px var(--primary-color); /* Bordure verte si actif */
+}
+
+.album-card-title, .album-card-artist {
+    margin-top: 8px;
+    font-size: 0.9em;
+    color: var(--secondary-color);
+}
+.album-card-title {
+    font-weight: bold;
+    color: var(--text-color);
+}
+
+
+/* TRACKLIST */
+#tracklist-container {
+    background: var(--card-bg);
+    border-radius: 8px;
+    padding: 20px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+#tracklist-ul {
+    list-style: none;
+    padding: 0;
+}
+
+/* TRACKLIST ITEM */
+.track-item {
+    padding: 10px 15px; /* Augmenter le padding */
+    border-bottom: 1px solid var(--hover-bg);
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.track-item:hover {
+    background-color: var(--hover-bg);
+}
+
+.track-item-info {
+    display: flex;
+    align-items: center;
+    gap: 10px; /* Espace entre la pochette et le titre */
+    flex-grow: 1;
+}
+
+.track-item-cover {
+    width: 30px;
+    height: 30px;
+    border-radius: 2px;
+    object-fit: cover;
+}
+
+.track-item-title {
+    color: var(--text-color);
+}
+
+.track-controls {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.track-play-button {
     background: none;
     border: none;
-    font-size: 1.5em;
+    color: var(--primary-color);
+    font-size: 1em;
     cursor: pointer;
-    color: #333;
+    padding: 5px;
+    font-weight: bold;
+    transition: opacity 0.2s;
+}
+.track-play-button:hover {
+    opacity: 0.7;
+}
+
+.track-delete-button {
+    background: none;
+    border: none;
+    color: #cc3333;
+    font-size: 1.1em;
+    cursor: pointer;
+    padding: 5px;
+    margin-left: 5px;
+}
+
+.track-item.active-track {
+    background-color: var(--hover-bg); 
+}
+.track-item.active-track .track-item-title {
+    color: var(--primary-color);
+    font-weight: bold;
+}
+
+
+/* 4. FOOTER / LECTEUR GLOBAL */
+#global-player-footer {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    background-color: var(--card-bg);
+    color: var(--text-color);
+    padding: 10px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 -4px 15px rgba(0, 0, 0, 0.1);
+    z-index: 999;
+}
+
+#current-info-footer {
+    min-width: 180px;
+    display: flex; 
+    align-items: center;
+}
+
+#center-playback-area {
+    flex-grow: 1; 
+    max-width: 700px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    margin: 0 20px;
+}
+
+#footer-controls {
+    display: flex;
+    justify-content: center; 
+    margin-bottom: 5px; 
+}
+
+#playback-bar {
+    display: flex;
+    align-items: center;
+    width: 100%; 
+}
+
+#progress-bar {
+    flex-grow: 1;
+    height: 5px;
+    margin: 0 10px;
+    -webkit-appearance: none;
+    appearance: none;
+    background: var(--hover-bg);
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+#progress-bar::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: var(--primary-color);
+}
+
+#duration, #current-time {
+    font-size: 0.8em;
+    color: var(--secondary-color);
+}
+
+#footer-controls button {
+    background: none;
+    border: none;
+    color: var(--text-color);
+    font-size: 20px;
+    padding: 5px 10px;
+    cursor: pointer;
+    transition: color 0.2s;
+}
+#footer-controls button:hover {
+    color: var(--primary-color);
+}
+
+/* STEMS et POUBELLE */
+#right-controls-area {
+    min-width: 180px; 
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+}
+#stem-controls {
+    display: flex;
+    align-items: center;
+    margin-left: 0;
+}
+
+.stem-mute-button {
+    padding: 5px 10px;
+    font-size: 0.8em;
+    background-color: var(--secondary-color);
+    color: white;
+    border: none;
+    border-radius: 50px;
+    cursor: pointer;
+}
+
+.stem-mute-button.active-stem {
+    background-color: var(--primary-color);
+    color: var(--text-color);
+}
+#delete-track-button {
+    font-size: 20px !important;
+}
+
+/* Media Queries pour la réactivité */
+@media (max-width: 800px) {
+    #global-player-footer {
+        flex-wrap: wrap;
+        padding-bottom: 10px; 
+    }
+    #center-playback-area {
+        order: -1; 
+        width: 100%;
+        margin: 5px 0;
+    }
+    #current-info-footer {
+        display: none; 
+    }
+    #right-controls-area {
+        order: 1;
+        width: 100%;
+        justify-content: center;
+        padding-top: 5px;
+    }
+    #footer-controls {
+        padding-top: 5px;
+    }
+    #search-bar input {
+        width: 150px;
+    }
+    #connect-stem-btn {
+        display: none;
+    }
 }
